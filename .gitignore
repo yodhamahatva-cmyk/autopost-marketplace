@@ -1,5 +1,7 @@
 node_modules/
 .next/
-data/
+# Folder data hanya di akar proyek (SUMBER_DATA=berkas). Jangan pakai "data/"
+# karena pola itu juga mengabaikan lib/data/.
+/data/
 .env*.local
 .claude/
