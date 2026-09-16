@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Formulir tiruan Marketplace — uji ekstensi</title>
+<!--
+  Tiruan formulir "Buat Tawaran" Facebook Marketplace untuk menguji ekstensi-chrome/isi-formulir.js
+  tanpa menyentuh Facebook sungguhan. Buka lewat server pratinjau di jalur /marketplace/create/item
+  dengan ?skenario=uji | terbit | kategori-salah | subkategori | login.
+  Perilaku yang ditiru: state gaya React (nilai hanya "terhitung" bila event input terpicu),
+  combobox + listbox, input file tersembunyi, tombol Berikutnya nonaktif sampai isian wajib lengkap,
+  halaman kedua dengan tombol Terbitkan, lalu pindah ke /marketplace/you/selling.
+-->
+<style>
+  body { font: 15px system-ui, sans-serif; background: #f0f2f5; margin: 0; }
+  main { max-width: 520px; margin: 70px auto 30px; background: #fff; border-radius: 10px; padding: 18px; box-shadow: 0 1px 3px rgba(0,0,0,.15); }
+  label { display: block; border: 1px solid #ccd0d5; border-radius: 6px; padding: 6px 10px; margin: 10px 0; cursor: text; position: relative; }
+  label span.l { display: block; font-size: 12px; color: #65676b; }
+  input, textarea { border: 0; outline: 0; width: 100%; font: inherit; padding: 2px 0; background: transparent; }
+  [role=combobox] { cursor: pointer; }
+  [role=listbox] { position: absolute; left: 0; right: 0; top: 100%; background: #fff; border: 1px solid #ccd0d5; border-radius: 6px; z-index: 5; box-shadow: 0 4px 12px rgba(0,0,0,.15); }
+  [role=option] { padding: 8px 10px; cursor: pointer; } [role=option]:hover { background: #f2f2f2; }
+  .foto { border: 2px dashed #ccd0d5; border-radius: 8px; padding: 16px; text-align: center; color: #65676b; }
+  .pratinjau img { width: 56px; height: 56px; object-fit: cover; margin: 4px; border-radius: 6px; background: #ddd; }
+  [role=button] { display: inline-block; margin-top: 12px; padding: 9px 16px; border-radius: 6px; background: #1877f2; color: #fff; font-weight: 600; cursor: pointer; }
+  [role=button][aria-disabled=true] { background: #e4e6eb; color: #bcc0c4; cursor: not-allowed; }
+  #log { max-width: 520px; margin: 0 auto 40px; font: 12px ui-monospace, Consolas, monospace; white-space: pre-wrap; background: #111827; color: #d1fae5; padding: 12px; border-radius: 8px; }
+</style>
+</head>
+<body>
+<main id="app"></main>
+<div id="log"></div>
+<script>
+  const log = (s) => { document.getElementById('log').textContent += s + '\n'; };
+  const skenario = new URLSearchParams(location.search).get('skenario') || 'uji';
+  window.__hasil = null;
+  window.__langkah = [];
+
+  // ---------------- tugas tiruan dari "pekerja latar"
+  const MODE_KENDARAAN = /\/vehicle/.test(location.pathname);
+  const TUGAS = MODE_KENDARAAN ? {
+    id: 'P0001', token: 't', uji: skenario !== 'kendaraan-terbit', jenis: 'kendaraan', judul: '2025 Daihatsu Ayla 1.0 X', harga: 156400000,
+    kategori: 'Kendaraan', kondisi: 'Bekas - Baik', lokasi: '', deskripsi: 'Mobil siap pakai, dokumen lengkap.', jumlahFoto: 3,
+    kendaraan: { jenis: 'Mobil/Truk', tahun: '2025', merek: skenario === 'kendaraan-merek-salah' ? 'Wuling Xyz' : 'Daihatsu', model: 'Ayla 1.0 X',
+      jarakTempuh: 15770, transmisi: 'Otomatis', bahanBakar: 'Bensin', warna: 'Kuning', tipeBodi: 'Hatchback' }
+  } : {
+    id: 'P0042', token: 't', uji: skenario === 'uji', judul: 'Kursi Rotan Antik', harga: 350000,
+    kategori: skenario === 'kategori-salah' ? 'Meja Makan' : skenario === 'subkategori' ? 'Rumah & Taman > Perabotan' : 'Perabotan',
+    kondisi: 'Bekas - Baik', lokasi: 'Besuki', deskripsi: 'Kursi rotan kokoh.\nBisa COD area Besuki.', jumlahFoto: 2
+  };
+  const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+  const stub = {
+    lastError: undefined,
+    onMessage: { addListener(fn) { window.__pendengar = fn; } },  // dipakai uji "hidup" & "rekam"
+    sendMessage(m, cb) {
+      setTimeout(() => {
+        if (m.jenis === 'halo') return cb(skenario === 'bukan-tugas' || skenario === 'rekam' ? null : Object.assign({}, TUGAS));
+        if (m.jenis === 'foto') return cb({ nama: 'foto' + (m.i + 1) + '.png', mime: 'image/png', data: PNG });
+        if (m.jenis === 'langkah') { window.__langkah.push(m.teks); log('… ' + m.teks); return cb(true); }
+        if (m.jenis === 'hasil') { window.__hasil = m; log('HASIL: ' + JSON.stringify({ hasil: m.hasil, pesan: m.pesan, pasti: m.pasti, url: m.url })); return cb(true); }
+        cb(null);
+      }, 30);
+    }
+  };
+  window.chrome = window.chrome || {};
+  Object.defineProperty(window.chrome, 'runtime', { value: stub, configurable: true });
+
+  // ---------------- formulir tiruan (state ala React)
+  const state = { foto: 0, judul: '', harga: '', kategori: '', kondisi: '', deskripsi: '', lokasi: '' };
+  const KATEGORI = { 'Perabotan': null, 'Elektronik': null, 'Pakaian': null, 'Rumah & Taman': ['Perabotan', 'Dekorasi', 'Taman'] };
+  const KONDISI = ['Baru', 'Bekas - Seperti Baru', 'Bekas - Baik', 'Bekas - Cukup Baik'];
+
+  function halaman1() {
+    const app = document.getElementById('app');
+    app.innerHTML = `
+      <h2>Barang Dijual</h2>
+      <div class="foto"><div role="button" aria-label="Tambahkan Foto" id="tbhFoto">Tambahkan Foto</div>
+        <input type="file" accept="image/*,image/heif,image/heic" multiple style="display:none" id="file"><div class="pratinjau" id="pratinjau"></div></div>
+      <label><div><span class="l" id="lblJudul">Judul</span><input type="text" aria-labelledby="lblJudul" data-k="judul" maxlength="100"></div></label>
+      <label><span class="l">Harga</span><input type="text" inputmode="numeric" data-k="harga"></label>
+      <label role="combobox" aria-haspopup="listbox" aria-expanded="false" tabindex="0" id="kotakKategori"><span class="l">Kategori</span><span class="nilai"></span></label>
+      <label role="combobox" aria-haspopup="listbox" aria-expanded="false" tabindex="0" id="kotakKondisi"><span class="l">Kondisi</span><span class="nilai"></span></label>
+      <label><span class="l">Deskripsi</span><textarea rows="3" data-k="deskripsi"></textarea></label>
+      <label><span class="l">Lokasi</span><input type="text" role="combobox" aria-autocomplete="list" data-k="lokasi" id="lokasi"></label>
+      <div role="button" aria-label="Berikutnya" aria-disabled="true" tabindex="0" id="lanjut">Berikutnya</div>`;
+    // Nilai hanya masuk state lewat event input (seperti komponen terkontrol React).
+    app.querySelectorAll('[data-k]').forEach((el) => el.addEventListener('input', () => {
+      let v = el.value;
+      if (el.dataset.k === 'harga') { const d = v.replace(/\D/g, ''); v = d; el.value = d ? 'Rp' + Number(d).toLocaleString('id-ID') : ''; }
+      state[el.dataset.k] = v;
+      perbarui();
+    }));
+    document.getElementById('file').addEventListener('change', (e) => {
+      const f = [...e.target.files];
+      state.foto += f.length;
+      f.forEach((x) => { const img = document.createElement('img'); img.src = URL.createObjectURL(x); document.getElementById('pratinjau').appendChild(img); });
+      log('foto diterima: ' + f.map((x) => x.name + ' (' + x.type + ', ' + x.size + ' B)').join(', '));
+      perbarui();
+    });
+    comboBox('kotakKategori', () => Object.keys(KATEGORI), (v, kotak) => {
+      if (KATEGORI[v]) { setTimeout(() => bukaDaftar(kotak, KATEGORI[v], (anak) => { state.kategori = v + ' > ' + anak; kotak.querySelector('.nilai').textContent = state.kategori; perbarui(); }), 50); return; }
+      state.kategori = v; kotak.querySelector('.nilai').textContent = v; perbarui();
+    });
+    comboBox('kotakKondisi', () => KONDISI, (v, kotak) => { state.kondisi = v; kotak.querySelector('.nilai').textContent = v; perbarui(); });
+    const lok = document.getElementById('lokasi');
+    lok.addEventListener('input', () => {
+      tutupDaftar();
+      if (lok.value.length < 2) return;
+      bukaDaftar(lok.closest('label'), [lok.value + ', Situbondo, Jawa Timur', lok.value + ' Kidul'], (v) => { lok.value = v; state.lokasi = v; });
+    });
+    document.getElementById('lanjut').addEventListener('click', (e) => {
+      if (e.currentTarget.getAttribute('aria-disabled') === 'true') return log('(klik Berikutnya diabaikan: nonaktif)');
+      halaman2();
+    });
+  }
+
+  function perbarui() {
+    const siap = state.foto > 0 && state.judul && state.harga && state.kategori && state.kondisi;
+    document.getElementById('lanjut').setAttribute('aria-disabled', siap ? 'false' : 'true');
+  }
+
+  function tutupDaftar() { document.querySelectorAll('[role=listbox]').forEach((x) => x.remove()); }
+  // Seperti dropdown Facebook: Escape atau klik di luar menutup daftar.
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') tutupDaftar(); });
+  document.addEventListener('click', (e) => { if (!e.target.closest('[role=combobox], [role=listbox]')) tutupDaftar(); });
+  function bukaDaftar(induk, opsi, pilih) {
+    tutupDaftar();
+    const lb = document.createElement('div');
+    lb.setAttribute('role', 'listbox');
+    opsi.forEach((o) => {
+      const d = document.createElement('div');
+      d.setAttribute('role', 'option');
+      d.textContent = o;
+      d.addEventListener('click', (e) => { e.stopPropagation(); tutupDaftar(); pilih(o, induk); });
+      lb.appendChild(d);
+    });
+    induk.appendChild(lb);
+  }
+  function comboBox(id, opsi, pilih) {
+    const k = document.getElementById(id);
+    k.addEventListener('click', (e) => { if (e.target.closest('[role=listbox]')) return; bukaDaftar(k, opsi(), pilih); });
+  }
+
+  function halaman2() {
+    if (!MODE_KENDARAAN) {
+      log('state halaman 1: ' + JSON.stringify(state));
+      window.__state = Object.assign({}, state);
+    }
+    document.getElementById('app').innerHTML = `<h2>Tawarkan di lebih banyak tempat</h2><p>Grup (opsional)</p>
+      <div role="button" aria-label="Terbitkan" tabindex="0" id="terbit">Terbitkan</div>`;
+    document.getElementById('terbit').addEventListener('click', () => {
+      log('TERBITKAN DIKLIK');
+      window.__terbitDiklik = true;
+      setTimeout(() => { history.pushState({}, '', '/marketplace/you/selling'); document.getElementById('app').innerHTML = '<h2>Tawaran Anda sudah terbit</h2>'; }, 1200);
+    });
+  }
+
+  // ---------------- formulir kendaraan tiruan (marketplace/create/vehicle)
+  const sk = { foto: 0, jenis: '', tahun: '', merek: '', model: '', jarak: '', harga: '', body: '', warna: '', warnaDalam: '', kondisi: '', bbm: '', transmisi: '', deskripsi: '' };
+  function kendaraan1() {
+    const app = document.getElementById('app');
+    app.innerHTML = `<h2>Kendaraan dijual</h2>
+      <label role="combobox" aria-haspopup="listbox" tabindex="0" id="kJenis"><span class="l">Jenis kendaraan</span><span class="nilai"></span></label>
+      <div id="sisa"></div>`;
+    comboBox('kJenis', () => ['Mobil/Truk', 'Sepeda motor', 'Kendaraan olahraga', 'Perahu'], (v, k) => {
+      sk.jenis = v; k.querySelector('.nilai').textContent = v;
+      setTimeout(kendaraan2, 400); // kolom lain muncul setelah jenis dipilih
+    });
+  }
+  function kendaraan2() {
+    const tahun = []; for (let y = 2026; y >= 1990; y--) tahun.push(String(y));
+    document.getElementById('sisa').innerHTML = `
+      <div class="foto"><div role="button" aria-label="Tambahkan foto">Tambahkan foto</div>
+        <input type="file" accept="image/*,image/heif,image/heic" multiple style="display:none" id="fileK"></div>
+      <label role="combobox" aria-haspopup="listbox" tabindex="0" id="kTahun"><span class="l">Tahun</span><span class="nilai"></span></label>
+      <label role="combobox" aria-haspopup="listbox" tabindex="0" id="kMerek"><span class="l">Merek</span><span class="nilai"></span></label>
+      <label><span class="l">Model</span><input type="text" data-v="model"></label>
+      <label><span class="l">Jarak tempuh</span><input type="text" inputmode="numeric" data-v="jarak"></label>
+      <label><span class="l">Harga</span><input type="text" inputmode="numeric" data-v="harga"></label>
+      <h3>Tampilan dan fitur kendaraan</h3>
+      <label role="combobox" aria-haspopup="listbox" tabindex="0" id="kBody"><span class="l">Tipe body</span><span class="nilai"></span></label>
+      <label role="combobox" aria-haspopup="listbox" tabindex="0" id="kWarna"><span class="l">Warna eksterior</span><span class="nilai"></span></label>
+      <label role="combobox" aria-haspopup="listbox" tabindex="0" id="kWarnaDalam"><span class="l">Warna Interior</span><span class="nilai"></span></label>
+      <h3>Detail kendaraan</h3>
+      <label role="combobox" aria-haspopup="listbox" tabindex="0" id="kKondisi"><span class="l">Kondisi kendaraan</span><span class="nilai"></span></label>
+      <label role="combobox" aria-haspopup="listbox" tabindex="0" id="kBbm"><span class="l">Jenis bahan bakar</span><span class="nilai"></span></label>
+      <label role="combobox" aria-haspopup="listbox" tabindex="0" id="kTrans"><span class="l">Transmisi</span><span class="nilai"></span></label>
+      <h3>Deskripsi</h3>
+      <label><span class="l">Keterangan</span><textarea rows="3" data-v="deskripsi"></textarea></label>
+      <div role="button" aria-label="Berikutnya" aria-disabled="true" tabindex="0" id="lanjutK">Berikutnya</div>`;
+    const pasang = (id, opsi, kunci) => comboBox(id, () => opsi, (v, k) => { sk[kunci] = v; k.querySelector('.nilai').textContent = v; cekK(); });
+    pasang('kTahun', tahun, 'tahun');
+    pasang('kMerek', ['Chevrolet', 'Daihatsu', 'Honda', 'Mitsubishi', 'Suzuki', 'Toyota'], 'merek');
+    pasang('kBody', ['Coupe', 'Convertible', 'Hatchback', 'Minivan', 'Sedan', 'SUV', 'Truk', 'Wagon'], 'body');
+    pasang('kWarna', ['Hitam', 'Putih', 'Perak', 'Merah', 'Kuning', 'Biru'], 'warna');
+    pasang('kWarnaDalam', ['Hitam', 'Abu-abu', 'Krem'], 'warnaDalam');
+    pasang('kKondisi', ['Sangat baik', 'Baik', 'Cukup', 'Buruk'], 'kondisi');
+    pasang('kBbm', ['Bensin', 'Diesel', 'Listrik', 'Hibrida', 'Lainnya'], 'bbm');
+    pasang('kTrans', ['Transmisi manual', 'Transmisi otomatis'], 'transmisi');
+    document.querySelectorAll('[data-v]').forEach((el) => el.addEventListener('input', () => {
+      let v = el.value;
+      if (el.dataset.v === 'harga' || el.dataset.v === 'jarak') { const d = v.replace(/\D/g, ''); v = d; el.value = d ? Number(d).toLocaleString('id-ID') : ''; }
+      sk[el.dataset.v] = v; cekK();
+    }));
+    document.getElementById('fileK').addEventListener('change', (e) => { sk.foto += e.target.files.length; log('foto kendaraan diterima: ' + e.target.files.length); cekK(); });
+    document.getElementById('lanjutK').addEventListener('click', (e) => {
+      if (e.currentTarget.getAttribute('aria-disabled') === 'true') return;
+      window.__state = Object.assign({}, sk); log('state kendaraan: ' + JSON.stringify(sk)); halaman2();
+    });
+  }
+  function cekK() {
+    // Wajib seperti formulir asli: jenis, foto, tahun, merek, model, jarak tempuh, harga, tipe body, warna eksterior, deskripsi.
+    const siap = sk.foto && sk.jenis && sk.tahun && sk.merek && sk.model && sk.jarak && sk.harga && sk.body && sk.warna && sk.deskripsi;
+    document.getElementById('lanjutK').setAttribute('aria-disabled', siap ? 'false' : 'true');
+  }
+
+  if (skenario === 'login') {
+    document.getElementById('app').innerHTML = '<h2>Masuk ke Facebook</h2><input name="email"><input name="pass" type="password">';
+  } else if (MODE_KENDARAAN) {
+    setTimeout(kendaraan1, 800);
+  } else {
+    setTimeout(halaman1, 800); // formulir muncul belakangan, seperti aplikasi React
+  }
+</script>
+<script src="/repo/ekstensi-chrome/isi-formulir.js"></script>
+</body>
+</html>

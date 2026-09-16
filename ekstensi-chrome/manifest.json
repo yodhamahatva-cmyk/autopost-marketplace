@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "AutoPost Iklan – Marketplace",
+  "short_name": "AutoPost MP",
+  "version": "2.0.0",
+  "description": "Memasang iklan Facebook Marketplace dari jadwal di dasbor AutoPost Iklan, memakai Chrome Anda yang sudah login.",
+  "icons": { "16": "ikon16.png", "48": "ikon48.png", "128": "ikon128.png" },
+  "action": { "default_popup": "popup.html", "default_title": "AutoPost Iklan – Marketplace" },
+  "background": { "service_worker": "latar.js" },
+  "permissions": ["alarms", "storage", "tabs", "notifications"],
+  "host_permissions": ["http://localhost/*", "http://127.0.0.1/*", "https://*.vercel.app/*"],
+  "optional_host_permissions": ["https://*/*"],
+  "content_scripts": [
+    {
+      "matches": ["https://*.facebook.com/marketplace/create/*"],
+      "js": ["isi-formulir.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["file:///*"],
+      "js": ["baca-folder.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
