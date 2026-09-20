@@ -59,7 +59,11 @@
     sendMessage(m, cb) {
       setTimeout(() => {
         if (m.jenis === 'halo') return cb(skenario === 'bukan-tugas' || skenario === 'rekam' ? null : Object.assign({}, TUGAS));
-        if (m.jenis === 'foto') return cb({ nama: 'foto' + (m.i + 1) + '.png', mime: 'image/png', data: PNG });
+        if (m.jenis === 'foto') {
+          // Link Google Drive yang belum dibagikan mengembalikan halaman web, bukan gambar.
+          if (skenario === 'foto-rusak') return cb({ nama: 'view', mime: 'text/html', sumber: 'https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStU/view', data: btoa('<html><body>Google Drive - halaman tidak ditemukan</body></html>') });
+          return cb({ nama: 'foto' + (m.i + 1) + '.png', mime: 'image/png', data: PNG });
+        }
         if (m.jenis === 'langkah') { window.__langkah.push(m.teks); log('… ' + m.teks); return cb(true); }
         if (m.jenis === 'hasil') { window.__hasil = m; log('HASIL: ' + JSON.stringify({ hasil: m.hasil, pesan: m.pesan, pasti: m.pasti, url: m.url })); return cb(true); }
         cb(null);
@@ -175,7 +179,7 @@
     const tahun = []; for (let y = 2026; y >= 1990; y--) tahun.push(String(y));
     document.getElementById('sisa').innerHTML = `
       <div class="foto"><div role="button" aria-label="Tambahkan foto">Tambahkan foto</div>
-        <input type="file" accept="image/*,image/heif,image/heic" multiple style="display:none" id="fileK"></div>
+        <input type="file" accept="image/*,image/heif,image/heic" multiple style="display:none" id="fileK"><div class="pratinjau" id="pratinjauK"></div></div>
       <label role="combobox" aria-haspopup="listbox" tabindex="0" id="kTahun"><span class="l">Tahun</span><span class="nilai"></span></label>
       <label role="combobox" aria-haspopup="listbox" tabindex="0" id="kMerek"><span class="l">Merek</span><span class="nilai"></span></label>
       <label><span class="l">Model</span><input type="text" data-v="model"></label>
@@ -208,7 +212,15 @@
       if (el.dataset.v === 'deskripsi' && skenario === 'deskripsi-terpotong' && v.length > 120) { v = v.slice(0, 120); el.value = v; }
       sk[el.dataset.v] = v; cekK();
     }));
-    document.getElementById('fileK').addEventListener('change', (e) => { sk.foto += e.target.files.length; log('foto kendaraan diterima: ' + e.target.files.length); cekK(); });
+    document.getElementById('fileK').addEventListener('change', (e) => {
+      const f = [...e.target.files];
+      // Facebook menolak berkas yang bukan gambar: tidak dihitung dan tidak ada pratinjaunya.
+      const sah = f.filter((x) => /^image\//.test(x.type));
+      sk.foto += sah.length;
+      sah.forEach((x) => { const img = document.createElement('img'); img.src = URL.createObjectURL(x); document.getElementById('pratinjauK').appendChild(img); });
+      log('foto kendaraan diterima: ' + sah.length + ' dari ' + f.length);
+      cekK();
+    });
     document.getElementById('lanjutK').addEventListener('click', (e) => {
       if (e.currentTarget.getAttribute('aria-disabled') === 'true') return;
       window.__state = Object.assign({}, sk); log('state kendaraan: ' + JSON.stringify(sk)); halaman2();
@@ -216,7 +228,9 @@
   }
   function cekK() {
     // Wajib seperti formulir asli: jenis, foto, tahun, merek, model, jarak tempuh, harga, tipe body, warna eksterior, deskripsi.
-    const siap = sk.foto && sk.jenis && sk.tahun && sk.merek && sk.model && sk.jarak && sk.harga && sk.body && sk.warna && sk.deskripsi;
+    // Skenario "tombol-mati": Facebook diam-diam mewajibkan satu kolom lagi (Warna Interior).
+    const siap = sk.foto && sk.jenis && sk.tahun && sk.merek && sk.model && sk.jarak && sk.harga && sk.body && sk.warna && sk.deskripsi &&
+      (skenario !== 'tombol-mati' || sk.warnaDalam);
     document.getElementById('lanjutK').setAttribute('aria-disabled', siap ? 'false' : 'true');
   }
 

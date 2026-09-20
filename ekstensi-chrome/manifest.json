@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "AutoPost Iklan – Marketplace",
   "short_name": "AutoPost MP",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "description": "Memasang iklan Facebook Marketplace dari jadwal di dasbor AutoPost Iklan, memakai Chrome Anda yang sudah login.",
   "icons": {
     "16": "ikon16.png",

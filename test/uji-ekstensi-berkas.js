@@ -52,6 +52,8 @@ cek(/'hidup'/.test(pengisi), 'menjawab pemeriksa hidup-mati dari pekerja latar')
 cek(/Tipe body/.test(pengisi) && /Keterangan/.test(pengisi) && /Warna eksterior/.test(pengisi),
   'penanda mengikuti label asli Facebook (Tipe body, Keterangan, Warna eksterior)');
 cek(/btoa\(/.test(folder) && /GAMBAR/.test(folder), 'pembaca folder mengubah gambar menjadi base64');
+cek(/function tandaGambar/.test(pengisi) && /bukan berkas gambar/.test(pengisi), 'berkas yang bukan gambar ditolak sebelum diunggah ke Facebook');
+cek(/ringkasKeadaan\(\)/.test(pengisi) && /Keadaan formulir saat itu/.test(pengisi), 'tombol yang tetap mati dilaporkan bersama keadaan kolom & foto');
 
 console.log('\n' + (gagal ? '❌' : '✅') + ' ' + lulus + ' lulus, ' + gagal + ' gagal');
 process.exit(gagal ? 1 : 0);

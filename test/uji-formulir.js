@@ -124,6 +124,22 @@ async function tungguHasil(page, ms) {
       'deskripsi dipotong Facebook (maxlength) → tetap lanjut, dicatat sebagai catatan', { panjang: dp.length, pesan: r.hasil && r.hasil.pesan });
     await p.close();
 
+    p = await buka(browser, '/marketplace/create/vehicle?skenario=tombol-mati');
+    r = await tungguHasil(p, 90000);
+    const pm = (r.hasil && r.hasil.pesan) || '';
+    cek(r.hasil && r.hasil.hasil === 'gagal' && /Tombol Berikutnya\/Terbitkan tidak aktif/.test(pm) && /foto terpasang: 3/.test(pm) && /warna interior/i.test(pm),
+      'tombol tetap mati → pesan menyebut jumlah foto & kolom yang masih kosong', pm);
+    await p.close();
+
+    console.log('■ Foto');
+    p = await buka(browser, '/marketplace/create/item?skenario=foto-rusak');
+    r = await tungguHasil(p, 45000);
+    const pf = (r.hasil && r.hasil.pesan) || '';
+    cek(r.hasil && r.hasil.hasil === 'gagal' && /bukan berkas gambar/.test(pf) && /drive\.google\.com/.test(pf) && /Siapa saja yang memiliki link/.test(pf),
+      'foto dari link Drive yang tidak terbagikan → gagal dengan sebab & cara memperbaikinya', pf);
+    cek(r.state === null || !r.state.foto, 'foto bukan gambar tidak dihitung formulir', r.state);
+    await p.close();
+
     console.log('■ Rekam formulir');
     p = await buka(browser, '/marketplace/create/vehicle?skenario=rekam');
     await p.waitForFunction(() => document.getElementById('kJenis'), { timeout: 10000 });

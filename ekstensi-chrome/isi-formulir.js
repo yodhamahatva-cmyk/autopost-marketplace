@@ -273,13 +273,31 @@
   }
   const tombolAktif = (b) => b && b.getAttribute('aria-disabled') !== 'true' && !b.disabled;
 
+  /** Benarkah isinya gambar? Dicek dari tanda awal berkas (JPEG/PNG/GIF/WEBP/BMP/HEIC). */
+  function tandaGambar(bytes) {
+    const b = bytes;
+    if (b.length < 12) return false;
+    if (b[0] === 0xff && b[1] === 0xd8) return true;                                   // JPEG
+    if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return true; // PNG
+    if (b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46) return true;                  // GIF
+    if (b[0] === 0x42 && b[1] === 0x4d) return true;                                   // BMP
+    const empat = String.fromCharCode(b[8], b[9], b[10], b[11]);
+    return empat === 'WEBP' || empat.startsWith('hei') || empat.startsWith('ftyp');     // WEBP / HEIC
+  }
+
   function base64KeFile(f, i) {
     const biner = atob(f.data);
     const bytes = new Uint8Array(biner.length);
     for (let k = 0; k < biner.length; k++) bytes[k] = biner.charCodeAt(k);
-    const ext = (f.mime.split('/')[1] || 'jpg').replace('jpeg', 'jpg');
+    if (!tandaGambar(bytes)) {
+      throw new Error('Foto ke-' + (i + 1) + ' (' + (f.nama || 'tanpa nama') + ') bukan berkas gambar yang bisa dibaca' +
+        (f.sumber ? ' — sumbernya: ' + f.sumber : '') + '. ' +
+        'Bila fotonya memakai link Google Drive, pastikan berkasnya dibagikan "Siapa saja yang memiliki link".');
+    }
+    const mime = f.mime && /^image\//.test(f.mime) ? f.mime : 'image/jpeg';
+    const ext = (mime.split('/')[1] || 'jpg').replace('jpeg', 'jpg');
     const nama = /\.\w{3,4}$/.test(f.nama) ? f.nama : 'foto-' + (i + 1) + '.' + ext;
-    return new File([bytes], nama, { type: f.mime, lastModified: Date.now() });
+    return new File([bytes], nama, { type: mime, lastModified: Date.now() });
   }
 
   // ---------------------------------------------------------- tampilan status di halaman
@@ -309,6 +327,7 @@
     return {
       waktu: new Date().toISOString(), url: location.href, judulHalaman: document.title, galat: galat, peringatan: peringatan.slice(),
       judulBagian: [...document.querySelectorAll('h1, h2, [role="heading"]')].filter(terlihat).slice(0, 10).map((h) => norm(h.innerText).slice(0, 60)),
+      fotoTerpasang: hitungFotoTerpasang(),
       isian: [...document.querySelectorAll(SELEKTOR_ISIAN)].filter(terlihat).slice(0, 50).map((el) => ({
         tag: el.tagName.toLowerCase(), role: el.getAttribute('role') || '', type: el.getAttribute('type') || '',
         nama: namaIsian(el), nilai: nilaiIsian(el).slice(0, 40) || norm(el.innerText || '').slice(0, 40)
@@ -343,6 +362,42 @@
     return d;
   }
 
+  // ---------------------------------------------------------- pelaporan keadaan formulir
+
+  /** Perkiraan jumlah foto yang sudah terpasang di formulir (pratinjau yang tampil). */
+  function hitungFotoTerpasang() {
+    const pratinjau = [...document.querySelectorAll('img[src^="blob:"], img[src^="data:image"]')].filter(terlihat);
+    return pratinjau.length;
+  }
+
+  /** [{nama, nilai}] keadaan tiap isian yang terlihat — untuk menjelaskan mengapa tombol masih mati. */
+  function keadaanKolom() {
+    return [...document.querySelectorAll(SELEKTOR_ISIAN)].filter(terlihat).map((el) => ({
+      nama: namaIsian(el)[0] || '(tanpa nama)',
+      nilai: (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')
+        ? String(el.value || '')
+        : norm(el.innerText || '').replace(new RegExp('^' + (namaIsian(el)[0] || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*'), '')
+    }));
+  }
+
+  /** Ringkasan singkat untuk pesan galat: kolom yang masih kosong + jumlah foto. */
+  function ringkasKeadaan() {
+    const kolom = keadaanKolom();
+    const kosong = kolom.filter((k) => !k.nilai.trim() && k.nama !== '(tanpa nama)').map((k) => k.nama);
+    const terisi = kolom.filter((k) => k.nilai.trim()).map((k) => k.nama + '=' + potongTeks(k.nilai, 24));
+    // Urutan sengaja: yang paling menjelaskan dulu, karena dasbor memotong pesan panjang.
+    const bagian = ['foto terpasang: ' + hitungFotoTerpasang()];
+    if (kosong.length) bagian.push('kolom masih kosong: ' + kosong.join(', '));
+    if (peringatan.length) bagian.push('catatan: ' + peringatan.join('; '));
+    if (terisi.length) bagian.push('sudah terisi: ' + potongTeks(terisi.join(', '), 220));
+    return bagian.join(' · ');
+  }
+
+  const potongTeks = (s, n) => {
+    const t = String(s || '').replace(/\s+/g, ' ').trim();
+    return t.length > n ? t.slice(0, n - 1) + '…' : t;
+  };
+
   // ---------------------------------------------------------- langkah bersama
 
   async function unggahFoto(t) {
@@ -360,7 +415,15 @@
     inputFoto.files = dt.files;
     inputFoto.dispatchEvent(new Event('input', { bubbles: true }));
     inputFoto.dispatchEvent(new Event('change', { bubbles: true }));
-    await jeda(2000 + 800 * berkas.length);
+    // Tunggu pratinjaunya muncul: bila Facebook tidak menerima fotonya, tombol Berikutnya
+    // akan tetap mati dan penyebabnya sulit ditebak, jadi lebih baik ketahuan di sini.
+    try {
+      await tunggu(() => hitungFotoTerpasang() >= 1, 25000);
+      await jeda(1200 + 500 * berkas.length); // beri waktu foto lain ikut terunggah
+    } catch (e) {
+      peringatan.push('pratinjau foto tidak terdeteksi (mungkin hanya tampilannya berbeda)');
+      await jeda(2000 + 800 * berkas.length);
+    }
   }
 
   async function isiHarga(t) {
@@ -468,8 +531,11 @@
           const lanjut = cariTombol(PENANDA.berikutnya);
           if (tombolAktif(lanjut)) return { jenis: 'lanjut', el: lanjut };
           return null;
-        }, 20000, 'Tombol Berikutnya/Terbitkan tidak aktif — ada kolom wajib yang belum terisi atau ditolak Facebook.' +
-          (peringatan.length ? ' Catatan: ' + peringatan.join('; ') : ''));
+        }, 25000, null).catch(() => {
+          // Facebook tidak pernah memberi tahu kolom mana yang kurang, jadi laporkan keadaan formulir apa adanya.
+          throw new Error('Tombol Berikutnya/Terbitkan tidak aktif — ada kolom wajib yang belum terisi atau ditolak Facebook. ' +
+            'Keadaan formulir saat itu → ' + ringkasKeadaan());
+        });
 
         if (tombol.jenis === 'lanjut') {
           klikAsli(tombol.el);

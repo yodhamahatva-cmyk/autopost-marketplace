@@ -73,6 +73,8 @@ Tiga bagian yang bekerja bersama:
 | **Folder di komputer** | foto sudah rapi per unit di PC penjual | mis. `D:\Foto Mobil\B1590DYA`; ekstensi membacanya langsung, tidak diunggah ke server |
 | **URL gambar** | foto sudah ada di web/hosting | satu URL per baris |
 
+> **Link Google Drive.** Link berbagi Drive (`drive.google.com/file/d/…/view`) bukan alamat gambar — yang terkirim halaman web, bukan foto, sehingga Facebook tidak menerimanya dan tombol *Berikutnya* tetap mati. Aplikasi ini otomatis mengubahnya menjadi alamat gambar langsung, tetapi itu hanya berhasil bila berkasnya dibagikan **“Siapa saja yang memiliki link (Pelihat)”**. Bila masih gagal, pesannya menyebutkan link mana yang bermasalah.
+
 Batas: 10 foto untuk barang, 20 foto untuk kendaraan (mengikuti Facebook).
 
 ---
@@ -100,6 +102,8 @@ Pengaturan → centang **Mode uji**. Ekstensi mengisi formulir sampai halaman te
 | “Merek/Warna … tidak ada di pilihan Facebook” | Pesan galat menyebutkan pilihan yang tersedia; samakan isinya di dasbor. |
 | "Skrip pengisi tidak merespons" | Ekstensi berhasil membuka tab tetapi skrip pengisinya tidak menjawab. Pesannya menyebutkan halaman apa yang terbuka. Bila bukan halaman buat iklan, buka `facebook.com/marketplace/create/vehicle` sekali secara manual di Chrome yang sama (Marketplace kadang minta verifikasi/pengaturan lokasi dulu), lalu jadwalkan ulang. Periksa juga `chrome://extensions` — ekstensi harus aktif, tanpa galat, versi 2.1.0 ke atas. |
 | "Isian tidak mau terisi" | Terjadi bila teks yang masuk jauh berbeda dari yang dikirim. Pesannya menyebutkan berapa karakter yang masuk. Perbedaan kecil (spasi, baris baru, emoji yang disaring, atau teks dipotong Facebook) tidak lagi dianggap gagal — hanya dicatat sebagai catatan pada hasil. |
+| "Tombol Berikutnya/Terbitkan tidak aktif" | Facebook tidak pernah menyebut kolom mana yang kurang, jadi pesannya kini melampirkan keadaan formulir: **foto terpasang: n**, kolom yang masih kosong, dan isi tiap kolom. Bila tertulis *foto terpasang: 0*, masalahnya di foto (lihat baris berikutnya). Bila ada kolom kosong yang disebut, isi kolom itu di dasbor. |
+| "Foto ke-n … bukan berkas gambar" | Sumber fotonya tidak mengeluarkan gambar — paling sering link Google Drive yang belum dibagikan "Siapa saja yang memiliki link", atau link halaman (bukan berkas). Perbaiki pembagiannya, atau unggah fotonya lewat dasbor. |
 | Status **Diproses** lama | Dasbor menampilkan langkah terakhir. Bila Chrome ditutup di tengah proses, setelah 20 menit iklan ditandai Gagal — cek Marketplace dulu sebelum menjadwalkan ulang agar tidak dobel. |
 | "Application error: a server-side exception" | Buka dasbor lagi: penyebabnya kini ditulis di kotak merah **Perlu diperbaiki** di bagian atas halaman. Paling sering: variabel Supabase belum diisi di Vercel, atau `skema.sql` belum dijalankan. Setelah variabel diubah, jangan lupa **Redeploy**. |
 | Tombol Simpan/Jadwalkan gagal | Pesannya muncul di halaman (bukan lagi error putih). Bila berbunyi "Supabase belum diatur", isi `SUMBER_DATA`, `SUPABASE_URL`, dan `SUPABASE_SERVICE_ROLE_KEY` di Vercel lalu Redeploy — disk Vercel hanya-baca sehingga data harus disimpan di Supabase. |
@@ -110,7 +114,7 @@ Pengaturan → centang **Mode uji**. Ekstensi mengisi formulir sampai halaman te
 
 ## Untuk pengembang
 
-- `npm run uji` menjalankan pemeriksaan inti + kontrak Supabase + berkas ekstensi (47 + 33 + 23) (CSV/XLSX, impor, aturan iklan, protokol ekstensi) tanpa server dan tanpa akun apa pun; data uji ditulis ke folder sementara.
+- `npm run uji` menjalankan pemeriksaan inti + kontrak Supabase + berkas ekstensi (52 + 33 + 25) (CSV/XLSX, impor, aturan iklan, protokol ekstensi) tanpa server dan tanpa akun apa pun; data uji ditulis ke folder sementara.
 - `node test/uji-api.js` menguji HTTP terhadap server yang sedang berjalan (`npm run dev`), termasuk alur ekstensi ujung-ke-ujung.
 - `node test/uji-supabase.js` menguji adaptor Supabase memakai tiruan yang **membaca skema.sql** dan menolak kolom/tipe yang tidak cocok — menangkap ketidakcocokan kolom tanpa perlu akun Supabase.
 - Lapisan data bisa ditukar lewat `SUMBER_DATA`: `supabase` atau `berkas` (folder `./data`). Antarmukanya sama, jadi aplikasi ini bisa dijalankan tanpa Supabase bila perlu.

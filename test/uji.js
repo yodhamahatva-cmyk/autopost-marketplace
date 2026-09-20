@@ -15,7 +15,7 @@ const { uraiCsv, urlCsv, ringkasTabel, ambilDariUrl, uraiBerkas } = await import
 const { tebakPemetaan, susunImpor, nilaiSumber, rapikanNilai } = await import('../lib/impor.js');
 const { rapikanIklan, periksaIklan, jumlahFoto, STATUS } = await import('../lib/iklan.js');
 const { db, setelanLengkap } = await import('../lib/data/index.js');
-const { prosesEkstensi, hitunganHariIni } = await import('../lib/ekstensi.js');
+const { prosesEkstensi, hitunganHariIni, alamatGambar, unduhGambar } = await import('../lib/ekstensi.js');
 const { dariInput, formatWaktu, untukInput } = await import('../lib/waktu.js');
 
 let lulus = 0;
@@ -181,6 +181,29 @@ XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['Merk', 'Tahun'], ['H
 const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
 const dariXlsx = uraiBerkas('stok.xlsx', buf);
 cek(dariXlsx[1][0] === 'Honda' && dariXlsx[1][1] === '2019', 'berkas XLSX terbaca', dariXlsx[1]);
+
+// ================================================================ Foto dari URL / Google Drive
+bagian('Foto dari URL');
+const dariDrive = alamatGambar('https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrS/view?usp=sharing');
+cek(dariDrive.length === 3 && dariDrive[0] === 'https://lh3.googleusercontent.com/d/1AbCdEfGhIjKlMnOpQrS=w2048',
+  'link berbagi Drive diubah jadi alamat gambar langsung', dariDrive[0]);
+cek(alamatGambar('https://drive.google.com/open?id=1AbCdEfGhIjKlMnOpQrS')[0].includes('1AbCdEfGhIjKlMnOpQrS'), 'bentuk ?id= juga dikenali');
+cek(alamatGambar('https://situs.com/foto.jpg').join() === 'https://situs.com/foto.jpg', 'URL biasa tidak diubah');
+
+const fetchAsli = globalThis.fetch;
+const balas = (tipe, isi) => ({ ok: true, status: 200, headers: { get: () => tipe }, arrayBuffer: async () => isi });
+const PNG_UJI = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(900, 7)]);
+globalThis.fetch = async () => balas('image/png', PNG_UJI);
+const gambarOk = await unduhGambar('https://situs.com/foto.png');
+cek(gambarOk.mime === 'image/png' && gambarOk.data.length === PNG_UJI.length, 'gambar sungguhan diterima', gambarOk.mime);
+
+const diminta = [];
+globalThis.fetch = async (u) => { diminta.push(u); return balas('text/html; charset=utf-8', Buffer.from('<html>Masuk ke Google</html>')); };
+let galatFoto = '';
+try { await unduhGambar('https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrS/view'); } catch (e) { galatFoto = e.message; }
+cek(diminta.length === 3 && /halaman web, bukan gambar/.test(galatFoto) && /Siapa saja yang memiliki link/.test(galatFoto),
+  'link Drive yang belum dibagikan: semua alamat dicoba lalu dijelaskan cara memperbaikinya', galatFoto);
+globalThis.fetch = fetchAsli;
 
 fs.rmSync(AKAR_UJI, { recursive: true, force: true });
 console.log('\n' + (gagal ? '❌' : '✅') + ' ' + lulus + ' lulus, ' + gagal + ' gagal');
