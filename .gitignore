@@ -5,3 +5,6 @@ node_modules/
 /data/
 .env*.local
 .claude/
+
+# arsip ekstensi yang dibuat untuk dipasang ke Chrome (sumbernya ada di ekstensi-chrome/)
+ekstensi-chrome.zip
