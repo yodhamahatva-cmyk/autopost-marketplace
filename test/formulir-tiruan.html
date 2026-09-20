@@ -40,7 +40,11 @@
   const MODE_KENDARAAN = /\/vehicle/.test(location.pathname);
   const TUGAS = MODE_KENDARAAN ? {
     id: 'P0001', token: 't', uji: skenario !== 'kendaraan-terbit', jenis: 'kendaraan', judul: '2025 Daihatsu Ayla 1.0 X', harga: 156400000,
-    kategori: 'Kendaraan', kondisi: 'Bekas - Baik', lokasi: '', deskripsi: 'Mobil siap pakai, dokumen lengkap.', jumlahFoto: 3,
+    kategori: 'Kendaraan', kondisi: 'Bekas - Baik', lokasi: '',
+    // Deskripsi iklan mobil sungguhan: panjang, ada emoji, dan banyak baris baru.
+    deskripsi: ['Suzuki Baleno 1.4 Bensin 2019', '💰 Harga: Rp 168.000.000', 'Kilometer: 32.000',
+      '✔ Mesin responsif', '✔ Interior bersih', 'Siap pakai, dokumen lengkap.'].join('\n'),
+    jumlahFoto: 3,
     kendaraan: { jenis: 'Mobil/Truk', tahun: '2025', merek: skenario === 'kendaraan-merek-salah' ? 'Wuling Xyz' : 'Daihatsu', model: 'Ayla 1.0 X',
       jarakTempuh: 15770, transmisi: 'Otomatis', bahanBakar: 'Bensin', warna: 'Kuning', tipeBodi: 'Hatchback' }
   } : {
@@ -186,7 +190,7 @@
       <label role="combobox" aria-haspopup="listbox" tabindex="0" id="kBbm"><span class="l">Jenis bahan bakar</span><span class="nilai"></span></label>
       <label role="combobox" aria-haspopup="listbox" tabindex="0" id="kTrans"><span class="l">Transmisi</span><span class="nilai"></span></label>
       <h3>Deskripsi</h3>
-      <label><span class="l">Keterangan</span><textarea rows="3" data-v="deskripsi"></textarea></label>
+      <label><span class="l">Keterangan</span><textarea rows="3" data-v="deskripsi"${skenario === 'deskripsi-terpotong' ? ' maxlength="120"' : ''}></textarea></label>
       <div role="button" aria-label="Berikutnya" aria-disabled="true" tabindex="0" id="lanjutK">Berikutnya</div>`;
     const pasang = (id, opsi, kunci) => comboBox(id, () => opsi, (v, k) => { sk[kunci] = v; k.querySelector('.nilai').textContent = v; cekK(); });
     pasang('kTahun', tahun, 'tahun');
@@ -200,6 +204,8 @@
     document.querySelectorAll('[data-v]').forEach((el) => el.addEventListener('input', () => {
       let v = el.value;
       if (el.dataset.v === 'harga' || el.dataset.v === 'jarak') { const d = v.replace(/\D/g, ''); v = d; el.value = d ? Number(d).toLocaleString('id-ID') : ''; }
+      // Facebook memotong deskripsi di komponennya sendiri (maxlength tidak berlaku bila nilai diisi lewat kode).
+      if (el.dataset.v === 'deskripsi' && skenario === 'deskripsi-terpotong' && v.length > 120) { v = v.slice(0, 120); el.value = v; }
       sk[el.dataset.v] = v; cekK();
     }));
     document.getElementById('fileK').addEventListener('change', (e) => { sk.foto += e.target.files.length; log('foto kendaraan diterima: ' + e.target.files.length); cekK(); });

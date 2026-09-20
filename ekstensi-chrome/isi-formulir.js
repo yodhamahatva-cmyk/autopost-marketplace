@@ -134,7 +134,10 @@
     return el.isContentEditable ? el.innerText.trim() : String(el.value || '');
   }
 
-  async function isiTeks(el, teks, perbandingan) {
+  /** Samakan teks sebelum dibandingkan: Facebook merapikan spasi, baris baru, dan spasi tak-putus. */
+  const samakan = (s) => String(s || '').replace(/\r/g, '').replace(/\u00a0/g, ' ').replace(/[ \t]+\n/g, '\n').trim();
+
+  async function isiTeks(el, teks, perbandingan, namaKolom) {
     teks = String(teks);
     el.scrollIntoView({ block: 'center' });
     el.focus();
@@ -147,7 +150,7 @@
     let berhasil = false;
     try { berhasil = document.execCommand('insertText', false, teks); } catch (e) { berhasil = false; }
     await jeda(200);
-    const sama = () => (perbandingan ? perbandingan(nilaiIsian(el), teks) : nilaiIsian(el).trim() === teks.trim());
+    const sama = () => (perbandingan ? perbandingan(nilaiIsian(el), teks) : samakan(nilaiIsian(el)) === samakan(teks));
     if (!berhasil || !sama()) {
       // Cadangan untuk isian React: pakai setter asli agar state komponen ikut berubah.
       if (!el.isContentEditable) {
@@ -158,9 +161,27 @@
       }
       el.dispatchEvent(new Event('input', { bubbles: true }));
       el.dispatchEvent(new Event('change', { bubbles: true }));
-      await jeda(200);
+      await jeda(350); // teks panjang butuh waktu lebih lama diproses React
     }
-    if (!sama()) throw new Error('Isian tidak mau terisi (terbaca "' + nilaiIsian(el).slice(0, 40) + '").');
+    if (!sama()) {
+      // Facebook kadang memotong teks (maxlength) atau menyaring karakter tertentu.
+      // Selama bagian awalnya cocok dan hampir seluruhnya masuk, iklan tetap layak diterbitkan.
+      const isi = nilaiIsian(el);
+      const maks = Number(el.getAttribute('maxlength')) || 0;
+      const target = maks ? Math.min(teks.length, maks) : teks.length;
+      const awalCocok = norm(isi).slice(0, 30) === norm(teks).slice(0, 30);
+      if (norm(isi) === norm(teks)) {
+        el.blur();
+        return; // hanya beda spasi/baris baru — isinya sama
+      }
+      if (isi.length && awalCocok && isi.length >= target * 0.9) {
+        peringatan.push((namaKolom || 'Isian') + ': terisi ' + isi.length + '/' + teks.length + ' karakter' +
+          (maks ? ' (dibatasi Facebook ' + maks + ')' : ' — sebagian karakter disaring Facebook'));
+      } else {
+        throw new Error('Isian tidak mau terisi — yang masuk ' + isi.length + ' dari ' + teks.length +
+          ' karakter: "' + isi.slice(0, 80).replace(/\n/g, ' ⏎ ') + '".');
+      }
+    }
     el.blur();
   }
 
@@ -228,10 +249,10 @@
     const pembanding = opsi.angka ? (v, t) => angka(v) === angka(t) : null;
     try {
       if (bisaKetik && el.getAttribute('role') !== 'combobox' && !el.getAttribute('aria-autocomplete')) {
-        await isiTeks(el, asli, pembanding);
+        await isiTeks(el, asli, pembanding, namaKolom);
       } else if (bisaKetik) {
         // Kotak teks dengan saran: ketik, lalu pilih saran yang cocok bila muncul.
-        await isiTeks(el, asli, () => true);
+        await isiTeks(el, asli, () => true, namaKolom);
         try { klikAsli(await tunggu(() => opsiCocok(nilai), 4000)); await jeda(500); } catch (e) { /* biarkan teks yang diketik */ }
       } else {
         await pilihOpsi(el, nilai, namaKolom);
@@ -345,20 +366,20 @@
   async function isiHarga(t) {
     await langkah('mengisi harga');
     const el = await tunggu(() => cariIsian(PENANDA.harga), 8000, 'Kolom Harga tidak ditemukan.');
-    await isiTeks(el, String(t.harga), (nilai, teks) => angka(nilai) === angka(teks));
+    await isiTeks(el, String(t.harga), (nilai, teks) => angka(nilai) === angka(teks), 'Harga');
   }
 
   async function isiDeskripsiLokasi(t) {
     if (t.deskripsi) {
       await langkah('mengisi deskripsi');
       const desk = await tunggu(() => cariIsian(PENANDA.deskripsi), 5000, 'Kolom Deskripsi tidak ditemukan.');
-      await isiTeks(desk, t.deskripsi);
+      await isiTeks(desk, t.deskripsi, null, 'Deskripsi');
     }
     if (t.lokasi) {
       await langkah('mengisi lokasi');
       const lok = cariIsian(PENANDA.lokasi);
       if (lok) {
-        await isiTeks(lok, t.lokasi, () => true);
+        await isiTeks(lok, t.lokasi, () => true, 'Lokasi');
         try {
           const saran = await tunggu(() => [...document.querySelectorAll('[role="option"]')].filter(terlihat)[0] || null, 6000);
           klikAsli(saran);
@@ -374,7 +395,7 @@
       'Formulir Buat Tawaran tidak ditemukan (kolom Judul tidak muncul). Bila ini iklan mobil/motor, isi kolom kendaraan di sheet.');
     await unggahFoto(t);
     await langkah('mengisi judul');
-    await isiTeks(cariIsian(PENANDA.judul) || judulEl, t.judul);
+    await isiTeks(cariIsian(PENANDA.judul) || judulEl, t.judul, null, 'Judul');
     await isiHarga(t);
     if (t.kategori) {
       await langkah('memilih kategori');

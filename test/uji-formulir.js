@@ -102,8 +102,8 @@ async function tungguHasil(page, ms) {
     const s = r.state || {};
     cek(s.jenis === 'Mobil/Truk' && s.tahun === '2025' && s.merek === 'Daihatsu' && s.model === 'Ayla 1.0 X' && s.jarak === '15770' && s.harga === '156400000',
       'jenis, tahun, merek, model, jarak tempuh, harga terisi', s);
-    cek(s.body === 'Hatchback' && s.warna === 'Kuning' && s.warnaDalam === '' && s.kondisi === 'Baik' && s.bbm === 'Bensin' && s.transmisi === 'Transmisi otomatis' && s.foto === 3 && /siap pakai/.test(s.deskripsi),
-      'tipe body, warna eksterior (bukan Warna Interior), kondisi, bahan bakar, transmisi, 3 foto, deskripsi ("Keterangan")', s);
+    cek(s.body === 'Hatchback' && s.warna === 'Kuning' && s.warnaDalam === '' && s.kondisi === 'Baik' && s.bbm === 'Bensin' && s.transmisi === 'Transmisi otomatis' && s.foto === 3 && /siap pakai/i.test(s.deskripsi) && s.deskripsi.split(String.fromCharCode(10)).length === 6 && s.deskripsi.includes(String.fromCodePoint(0x1F4B0)),
+      'tipe body, warna eksterior (bukan Warna Interior), kondisi, bahan bakar, transmisi, 3 foto, deskripsi panjang beremoji utuh 6 baris', s);
     cek(r.langkah.indexOf('memilih jenis kendaraan') >= 0 && r.langkah.indexOf('mengisi jarak tempuh') >= 0, 'langkah kendaraan dilaporkan', r.langkah);
     await p.close();
 
@@ -115,6 +115,13 @@ async function tungguHasil(page, ms) {
     p = await buka(browser, '/marketplace/create/vehicle?skenario=kendaraan-merek-salah');
     r = await tungguHasil(p, 60000);
     cek(r.hasil && r.hasil.hasil === 'gagal' && /Langkah "mengisi merek".*Merek "Wuling Xyz" tidak ada.*Daihatsu/.test(r.hasil.pesan), 'merek tak dikenal → gagal dengan daftar merek Facebook', r.hasil);
+    await p.close();
+
+    p = await buka(browser, '/marketplace/create/vehicle?skenario=deskripsi-terpotong');
+    r = await tungguHasil(p, 60000);
+    const dp = (r.state || {}).deskripsi || '';
+    cek(r.hasil && r.hasil.hasil === 'uji' && dp.length === 120 && /terisi 120\/\d+ karakter/.test(r.hasil.pesan || ''),
+      'deskripsi dipotong Facebook (maxlength) → tetap lanjut, dicatat sebagai catatan', { panjang: dp.length, pesan: r.hasil && r.hasil.pesan });
     await p.close();
 
     console.log('■ Rekam formulir');
