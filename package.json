@@ -8,7 +8,7 @@
     "dev": "next dev -p 3110",
     "build": "next build",
     "start": "next start -p 3110",
-    "uji": "node test/uji.js && node test/uji-supabase.js",
+    "uji": "node test/uji.js && node test/uji-supabase.js && node test/uji-ekstensi-berkas.js",
     "uji-api": "node test/uji-api.js",
     "uji-formulir": "node test/uji-formulir.js",
     "uji-supabase": "node test/uji-supabase.js"

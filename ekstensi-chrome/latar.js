@@ -182,6 +182,8 @@ async function putaran(paksa) {
     const tabId = await bukaFormulir(t, s.tampilkan);
     await simpanTugas(Object.assign({}, t, { tabId, mulai: Date.now(), kabar: Date.now(), dimulai: false, ulang: 0, langkah: 'membuka formulir' }));
     laporProgres(t, 'membuka formulir Facebook (' + (t.jenis === 'kendaraan' ? 'kendaraan' : 'barang') + ')');
+    const galatSuntik = await suntikPengisi(tabId);
+    if (galatSuntik) laporProgres(t, galatSuntik);
     return { pesan: 'Memproses: ' + t.judul };
   } catch (e) {
     await catatStatus({ terakhir: Date.now(), galat: e.message });
@@ -189,6 +191,35 @@ async function putaran(paksa) {
   } finally {
     sibuk = false;
   }
+}
+
+/** Tunggu tab selesai memuat (atau sudah selesai). */
+async function tungguMuat(tabId, ms = 25000) {
+  const tab = await chrome.tabs.get(tabId).catch(() => null);
+  if (tab && tab.status === 'complete') return tab;
+  return new Promise((selesai) => {
+    const batas = setTimeout(() => { bersih(); selesai(null); }, ms);
+    const dengar = (id, ubah) => { if (id === tabId && ubah.status === 'complete') { bersih(); chrome.tabs.get(tabId).then(selesai, () => selesai(null)); } };
+    const bersih = () => { clearTimeout(batas); chrome.tabs.onUpdated.removeListener(dengar); };
+    chrome.tabs.onUpdated.addListener(dengar);
+  });
+}
+
+/**
+ * Suntikkan skrip pengisi. Manifes sudah mendaftarkannya untuk halaman buat iklan,
+ * tetapi penyuntikan langsung ini membuatnya tetap jalan meski URL Facebook berbeda
+ * dari pola yang didaftarkan (mis. dialihkan ke domain/jalur lain).
+ */
+async function suntikPengisi(tabId) {
+  const tab = await tungguMuat(tabId);
+  const url = tab?.url || '';
+  if (url && !/facebook\.com/.test(url)) return 'Halaman yang terbuka bukan Facebook: ' + url.split('?')[0];
+  try {
+    await chrome.scripting.executeScript({ target: { tabId }, files: ['isi-formulir.js'] });
+  } catch (e) {
+    return 'Skrip pengisi tidak bisa dijalankan di ' + (url.split('?')[0] || 'halaman itu') + ' (' + e.message + ').';
+  }
+  return '';
 }
 
 async function bukaFormulir(t, tampilkan) {
@@ -220,11 +251,18 @@ async function jagaTugas(tugas) {
     await simpanTugas(tugas);
     laporProgres(tugas, tugas.langkah);
     await chrome.tabs.update(tugas.tabId, { url: URL_BUAT[tugas.jenis] || URL_BUAT.barang });
+    await suntikPengisi(tugas.tabId);
     return { pesan: 'Memuat ulang formulir: ' + tugas.judul };
   }
+  const dimana = tab
+    ? ' Halaman yang terbuka: ' + String(tab.url || '').split('?')[0] + (tab.title ? ' — "' + tab.title + '"' : '') + '.'
+    : ' Tab formulir sudah tertutup.';
+  const saran = tab && !/\/marketplace\/create/.test(String(tab.url || ''))
+    ? ' Facebook tidak membuka halaman buat iklan (mungkin diminta login, verifikasi, atau Marketplace tidak tersedia untuk akun ini). Buka halaman itu sekali secara manual di Chrome yang sama, lalu jadwalkan ulang.'
+    : ' Coba buka chrome://extensions → pastikan ekstensi aktif dan tidak ada galat, lalu jadwalkan ulang.';
   await selesai(tugas, {
     hasil: 'gagal', pasti: !tugas.terbitDiklik,
-    pesan: 'Formulir tidak merespons saat ' + (tugas.langkah || 'membuka formulir') + (tab ? '' : ' (tab sudah tertutup)') + '.'
+    pesan: 'Skrip pengisi tidak merespons saat ' + (tugas.langkah || 'membuka formulir') + '.' + dimana + saran
   });
   return { pesan: 'Tugas dihentikan.' };
 }

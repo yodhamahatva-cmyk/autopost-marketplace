@@ -6,11 +6,17 @@
  *   set CHROME=C:\...\chrome.exe    (opsional; bawaan mencari Chrome/Edge terpasang)
  *   node test/uji-formulir.js
  */
-const fs = require('fs');
-const path = require('path');
-const puppeteer = require('puppeteer-core');
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
 
-const AKAR = path.join(__dirname, '..');
+// puppeteer-core sengaja tidak masuk package.json (hanya perkakas uji, tidak perlu ikut terpasang di Vercel).
+// Pasang sekali di mana saja lalu tunjuk lewat NODE_PATH, mis.:
+//   npm i puppeteer-core   lalu   set NODE_PATH=<folder itu>/node_modules
+const puppeteer = createRequire(import.meta.url)('puppeteer-core');
+
+const AKAR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CHROME = process.env.CHROME || [
   'C:/Program Files/Google/Chrome/Application/chrome.exe',
   'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe',
