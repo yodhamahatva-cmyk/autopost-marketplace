@@ -8,21 +8,20 @@ import Salin from '../../components/Salin.jsx';
 
 export const dynamic = 'force-dynamic';
 
-export default async function Pengaturan() {
+export default async function Pengaturan({ searchParams }) {
   await wajibMasuk();
+  const sp = await searchParams;
   const setelan = await setelanLengkap();
   const h = await headers();
   const asal = (h.get('x-forwarded-proto') || 'https') + '://' + (h.get('x-forwarded-host') || h.get('host') || 'localhost:3110');
   const urlApi = asal + '/api/ekstensi';
 
-  async function aksiKunci() {
-    'use server';
-    await buatKunciEkstensi();
-  }
-
   return (
     <>
       <h1>Pengaturan</h1>
+      {sp?.simpan && <div className="pesan ok">Pengaturan tersimpan.</div>}
+      {sp?.kunci && <div className="pesan ok">Kunci baru dibuat. Tempel di ekstensi Chrome.</div>}
+      {sp?.galat && <div className="pesan galat">Gagal menyimpan: {sp.galat}</div>}
       <p className="kecil">Penyimpanan: <b>{db().jenis === 'supabase' ? 'Supabase' : 'berkas lokal'}</b>{sandiDiatur() ? '' : ' · ⚠️ SANDI_DASBOR belum diatur'}</p>
 
       <div className="kartu">
@@ -40,7 +39,7 @@ export default async function Pengaturan() {
         {setelan.kunciEkstensi
           ? <Salin nilai={setelan.kunciEkstensi} rahasia />
           : <div className="bantuan">Belum ada kunci. Buat dulu, lalu tempel di ekstensi.</div>}
-        <form action={aksiKunci} style={{ marginTop: 10 }}>
+        <form action={buatKunciEkstensi} style={{ marginTop: 10 }}>
           <button className="btn" type="submit">{setelan.kunciEkstensi ? 'Buat kunci baru' : 'Buat kunci'}</button>
         </form>
         <div className="bantuan" style={{ marginTop: 10 }}>

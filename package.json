@@ -3,13 +3,15 @@
   "version": "1.0.0",
   "private": true,
   "description": "Dasbor web penjadwal & pemasang iklan Facebook Marketplace (impor Google Sheet, foto lokal/unggahan, ekstensi Chrome).",
+  "type": "module",
   "scripts": {
     "dev": "next dev -p 3110",
     "build": "next build",
     "start": "next start -p 3110",
-    "uji": "node test/uji.js",
+    "uji": "node test/uji.js && node test/uji-supabase.js",
     "uji-api": "node test/uji-api.js",
-    "uji-formulir": "node test/uji-formulir.js"
+    "uji-formulir": "node test/uji-formulir.js",
+    "uji-supabase": "node test/uji-supabase.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",

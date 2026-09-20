@@ -32,6 +32,7 @@ export default async function UbahIklan({ params, searchParams }) {
       </div>
 
       {sp?.simpan && <div className="pesan ok">Perubahan tersimpan.</div>}
+      {sp?.galat && <div className="pesan galat">{sp.galat}</div>}
       {iklan.keterangan && <div className="pesan info">{iklan.keterangan}</div>}
       {!cek.siap && <div className="pesan waspada">Belum bisa dijadwalkan: {cek.galat.join(' ')}</div>}
       {!!cek.saran.length && <div className="pesan info">Catatan: {cek.saran.join(' ')}</div>}

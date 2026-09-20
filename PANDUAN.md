@@ -99,6 +99,8 @@ Pengaturan → centang **Mode uji**. Ekstensi mengisi formulir sampai halaman te
 | “Chrome ini belum login Facebook” | Login Facebook di Chrome yang dipasangi ekstensi, lalu jadwalkan ulang. |
 | “Merek/Warna … tidak ada di pilihan Facebook” | Pesan galat menyebutkan pilihan yang tersedia; samakan isinya di dasbor. |
 | Status **Diproses** lama | Dasbor menampilkan langkah terakhir. Bila Chrome ditutup di tengah proses, setelah 20 menit iklan ditandai Gagal — cek Marketplace dulu sebelum menjadwalkan ulang agar tidak dobel. |
+| "Application error: a server-side exception" | Buka dasbor lagi: penyebabnya kini ditulis di kotak merah **Perlu diperbaiki** di bagian atas halaman. Paling sering: variabel Supabase belum diisi di Vercel, atau `skema.sql` belum dijalankan. Setelah variabel diubah, jangan lupa **Redeploy**. |
+| Tombol Simpan/Jadwalkan gagal | Pesannya muncul di halaman (bukan lagi error putih). Bila berbunyi "Supabase belum diatur", isi `SUMBER_DATA`, `SUPABASE_URL`, dan `SUPABASE_SERVICE_ROLE_KEY` di Vercel lalu Redeploy — disk Vercel hanya-baca sehingga data harus disimpan di Supabase. |
 | Google Sheet tidak terbaca | Sheet masih privat. Bagikan “Siapa saja yang memiliki link”, atau pakai Publikasikan ke web → CSV. |
 | Formulir Facebook berubah | Buka halaman buat iklan di Chrome → ikon ekstensi → **Rekam formulir halaman ini**; strukturnya tersimpan di riwayat dasbor untuk diperbaiki. |
 
@@ -106,8 +108,9 @@ Pengaturan → centang **Mode uji**. Ekstensi mengisi formulir sampai halaman te
 
 ## Untuk pengembang
 
-- `npm run uji` menjalankan 47 pemeriksaan inti (CSV/XLSX, impor, aturan iklan, protokol ekstensi) tanpa server dan tanpa akun apa pun; data uji ditulis ke folder sementara.
+- `npm run uji` menjalankan pemeriksaan inti + kontrak Supabase (47 + 33) (CSV/XLSX, impor, aturan iklan, protokol ekstensi) tanpa server dan tanpa akun apa pun; data uji ditulis ke folder sementara.
 - `node test/uji-api.js` menguji HTTP terhadap server yang sedang berjalan (`npm run dev`), termasuk alur ekstensi ujung-ke-ujung.
+- `node test/uji-supabase.js` menguji adaptor Supabase memakai tiruan yang **membaca skema.sql** dan menolak kolom/tipe yang tidak cocok — menangkap ketidakcocokan kolom tanpa perlu akun Supabase.
 - Lapisan data bisa ditukar lewat `SUMBER_DATA`: `supabase` atau `berkas` (folder `./data`). Antarmukanya sama, jadi aplikasi ini bisa dijalankan tanpa Supabase bila perlu.
 - Protokol ekstensi: `POST /api/ekstensi` dengan `{kunci, aksi}` — `ping`, `ambil`, `foto`, `progres`, `lapor`, `rekam`. Setiap tugas memakai token sekali pakai.
 - Penanda formulir Facebook (label Indonesia/Inggris) ada di objek `PENANDA` dalam `ekstensi-chrome/isi-formulir.js`.

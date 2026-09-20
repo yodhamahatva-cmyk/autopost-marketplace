@@ -1,5 +1,6 @@
 import './globals.css';
 import { sudahMasuk, sandiDiatur, keluar } from '../lib/auth.js';
+import { periksaKonfigurasi } from '../lib/data/index.js';
 
 export const metadata = {
   title: 'AutoPost Iklan — Marketplace',
@@ -15,6 +16,7 @@ const MENU = [
 
 export default async function Layout({ children }) {
   const masuk = await sudahMasuk();
+  const masalah = masuk ? await periksaKonfigurasi() : [];
   async function aksiKeluar() {
     'use server';
     await keluar();
@@ -39,7 +41,12 @@ export default async function Layout({ children }) {
             )}
           </div>
         </header>
-        <main>{children}</main>
+        <main>
+          {masalah.map((m) => (
+            <div className="pesan galat" key={m}><b>Perlu diperbaiki:</b> {m}</div>
+          ))}
+          {children}
+        </main>
       </body>
     </html>
   );
