@@ -45,7 +45,7 @@ function tampilStatus(st, diag) {
   const h = st.hasilTerakhir;
   $('kartuHasil').hidden = !h;
   if (h) {
-    const label = { terbit: '✅ Terbit', uji: '🧪 Mode uji', gagal: '⚠️ Gagal' }[h.hasil] || h.hasil;
+    const label = { terbit: '✅ Terbit', draf: '📝 Draf di Facebook', uji: '🧪 Mode uji', gagal: '⚠️ Gagal' }[h.hasil] || h.hasil;
     $('hasil').textContent = label + ' · ' + h.judul + ' · ' + waktu(h.waktu) + (h.pesan ? '\n' + h.pesan : '');
   }
   $('tombolDiagnosa').hidden = !diag;
@@ -75,7 +75,11 @@ $('simpan').addEventListener('click', async () => {
     const st = (await chrome.storage.local.get({ status: {} })).status;
     st.versiDasbor = r.versi || '?';
     await chrome.storage.local.set({ status: st });
-    pesan('ok', 'Terhubung ke "' + r.nama + '".\n' + (r.uji ? '🧪 Mode uji AKTIF — formulir diisi tetapi tidak diterbitkan.' : '🚀 Mode uji mati — iklan akan diterbitkan.') +
+    pesan('ok', 'Terhubung ke "' + r.nama + '".\n' + ({
+      uji: '🧪 Mode uji AKTIF — formulir diisi tetapi tidak diterbitkan.',
+      draf: '📝 Iklan disimpan sebagai DRAF di Facebook — Anda yang menerbitkannya sendiri.',
+      terbit: '🚀 Iklan akan langsung diterbitkan.'
+    }[r.akhir || (r.uji ? 'uji' : 'terbit')]) +
       '\nJeda ' + r.jeda + ' menit · maks ' + r.batas + '/hari · hari ini ' + r.hariIni + '.' +
       '\nVersi dasbor ' + (r.versi || '?') + ' · ekstensi ' + VERSI + '.');
   } catch (e) {

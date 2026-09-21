@@ -286,13 +286,13 @@ async function selesai(tugas, m) {
   } catch (e) {
     catatan = ' (gagal melapor ke dasbor: ' + e.message + ')';
   }
-  const judul = { terbit: '✅ Terbit di Marketplace', uji: '🧪 Mode uji: formulir terisi', gagal: '⚠️ Gagal memposting' }[m.hasil] || 'AutoPost Iklan';
+  const judul = { terbit: '✅ Terbit di Marketplace', draf: '📝 Tersimpan sebagai draf', uji: '🧪 Mode uji: formulir terisi', gagal: '⚠️ Gagal memposting' }[m.hasil] || 'AutoPost Iklan';
   chrome.notifications.create({
     type: 'basic', iconUrl: 'ikon128.png', title: judul,
-    message: tugas.judul + (m.pesan ? ' — ' + m.pesan : '') + catatan, priority: m.hasil === 'terbit' ? 0 : 2
+    message: tugas.judul + (m.pesan ? ' — ' + m.pesan : '') + catatan, priority: m.hasil === 'terbit' || m.hasil === 'draf' ? 0 : 2
   });
   await catatStatus({ hasilTerakhir: { waktu: Date.now(), judul: tugas.judul, hasil: m.hasil, pesan: (m.pesan || '') + catatan } });
-  if (m.hasil === 'terbit' && tugas.tabId) {
+  if ((m.hasil === 'terbit' || m.hasil === 'draf') && tugas.tabId) {
     setTimeout(() => { chrome.tabs.remove(tugas.tabId).catch(() => {}); }, 5000);
   }
 }

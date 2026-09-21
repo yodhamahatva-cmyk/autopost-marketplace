@@ -79,6 +79,19 @@ const akhir = JSON.parse(fs.readFileSync(path.join(DATA, 'iklan.json'), 'utf8'))
 cek(terbit.status === 'terbit' && akhir.status === 'terbit' && akhir.hasilUrl.includes('item/123'), 'lapor terbit tersimpan', akhir.status);
 const jeda = await kirim({ aksi: 'ambil' });
 cek(!jeda.tugas, 'antrean kosong setelah terbit');
+
+// mode draf → iklan tersimpan di Facebook tetapi tidak diterbitkan
+fs.writeFileSync(path.join(DATA, 'setelan.json'), JSON.stringify({
+  kunciEkstensi: KUNCI, akhir: 'draf', modeUji: false, jedaMenit: 10, batasHarian: 10, zona: 'Asia/Jakarta'
+}, null, 2));
+const ulang = JSON.parse(fs.readFileSync(path.join(DATA, 'iklan.json'), 'utf8'));
+ulang[0] = { ...ulang[0], status: 'terjadwal', jadwal: iso(-5), token: null, klaim: null, hasilUrl: '' };
+fs.writeFileSync(path.join(DATA, 'iklan.json'), JSON.stringify(ulang, null, 2));
+const aDraf = await kirim({ aksi: 'ambil' });
+cek(aDraf.tugas?.draf === true && aDraf.tugas.uji === false, 'ambil dalam mode draf: tugas bertanda draf', aDraf.tugas && { draf: aDraf.tugas.draf, uji: aDraf.tugas.uji });
+const draf = await kirim({ aksi: 'lapor', id: IKLAN.id, token: aDraf.tugas.token, hasil: 'draf' });
+const stDraf = JSON.parse(fs.readFileSync(path.join(DATA, 'iklan.json'), 'utf8'))[0];
+cek(draf.status === 'draf-fb' && stDraf.status === 'draf-fb' && /Draf/.test(stDraf.keterangan), 'lapor draf → status Draf di Facebook', stDraf.status);
 cek((await kirim({ aksi: 'rekam', diagnosa: { url: 'https://www.facebook.com/marketplace/create/vehicle' } })).ok, 'rekam formulir diterima');
 
 bagian('Impor CSV lewat API');

@@ -5,7 +5,8 @@ Dasbor web untuk menjadwalkan dan memasang iklan **Facebook Marketplace**: impor
 - **Tanpa Google Drive.** Foto boleh diunggah ke aplikasi, diambil dari **folder di komputer** (dibaca langsung oleh ekstensi, tidak diunggah ke mana pun), atau berupa URL gambar.
 - **Impor Google Sheet** lewat link berbagi/publikasi, atau unggah CSV/XLSX. Pemetaan kolom ditebak dari nama header.
 - **Iklan kendaraan** memakai formulir khusus Facebook (Jenis kendaraan, Tahun, Merek, Model, Jarak tempuh, Tipe body, Warna eksterior).
-- **Pengaman**: mode uji (mengisi tanpa menerbitkan), jeda antar posting, batas harian, dan pencegah impor dobel lewat Kunci Unik.
+- **Tiga cara menutup formulir**: mode uji (mengisi tanpa menekan apa pun), **simpan sebagai draf di Facebook** (pemilik akun yang menerbitkan sendiri), atau terbitkan langsung.
+- **Pengaman**: jeda antar posting, batas harian, dan pencegah impor dobel lewat Kunci Unik.
 
 > Facebook tidak menyediakan API Marketplace. Ekstensi bekerja seperti Anda sendiri di Chrome — tanpa menyimpan sandi dan tanpa menyamar — tetapi otomatisasi tetap tidak didukung resmi oleh Meta, sehingga akun bisa dibatasi. Lihat [PANDUAN.md](PANDUAN.md).
 

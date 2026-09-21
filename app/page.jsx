@@ -1,6 +1,6 @@
 import { wajibMasuk } from '../lib/auth.js';
 import { db, setelanLengkap } from '../lib/data/index.js';
-import { LABEL_STATUS, STATUS } from '../lib/iklan.js';
+import { LABEL_STATUS, STATUS, caraAkhir } from '../lib/iklan.js';
 import { hitunganHariIni } from '../lib/ekstensi.js';
 import { formatWaktu, relatif } from '../lib/waktu.js';
 import { rupiah } from '../lib/util.js';
@@ -39,6 +39,8 @@ export default async function Dasbor() {
         {[
           ['Terjadwal', hitung.terjadwal, 'l-terjadwal'],
           ['Terbit', hitung.terbit, 'l-terbit'],
+          // Kartu draf hanya muncul bila memang dipakai, supaya barisnya tetap rapi berempat.
+          ...(hitung['draf-fb'] ? [['Draf di Facebook', hitung['draf-fb'], 'l-draf-fb']] : []),
           ['Diproses', hitung.diproses, 'l-diproses'],
           ['Perlu dicek', (hitung.gagal || 0) + (hitung.terlewat || 0), 'l-gagal']
         ].map(([label, nilai, kelas]) => (
@@ -58,7 +60,11 @@ export default async function Dasbor() {
             {setelan.ekstensiTerakhir && <span className="kecil"> · terakhir {relatif(setelan.ekstensiTerakhir)}</span>}
           </p>
           <div className="kecil">
-            {setelan.modeUji ? '🧪 Mode uji AKTIF — formulir diisi tetapi tidak diterbitkan.' : '🚀 Mode uji mati — iklan akan diterbitkan.'}<br />
+            {{
+              uji: '🧪 Mode uji AKTIF — formulir diisi tetapi tidak diterbitkan.',
+              draf: '📝 Disimpan sebagai draf di Facebook — Anda yang menerbitkannya sendiri.',
+              terbit: '🚀 Iklan akan langsung diterbitkan.'
+            }[caraAkhir(setelan)]}<br />
             Jeda {setelan.jedaMenit} menit · maksimal {setelan.batasHarian}/hari · hari ini {hitunganHariIni(setelan)} terbit.
           </div>
         </div>

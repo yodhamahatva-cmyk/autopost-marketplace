@@ -22,6 +22,11 @@
     lokasi: ['Lokasi', 'Location'],
     berikutnya: ['Berikutnya', 'Selanjutnya', 'Lanjutkan', 'Next', 'Continue'],
     terbitkan: ['Terbitkan', 'Publikasikan', 'Posting', 'Publish', 'Post'],
+    // ---- simpan sebagai draf (owner menerbitkan sendiri nanti)
+    simpanDrafLangsung: ['Simpan draf', 'Simpan sebagai draf', 'Simpan draft', 'Save draft', 'Save as draft'],
+    simpanDraf: ['Simpan draf', 'Simpan sebagai draf', 'Simpan draft', 'Save draft', 'Save as draft', 'Simpan', 'Save'],
+    tutupFormulir: ['Tutup', 'Close', 'Kembali', 'Back'],
+    buang: ['Buang', 'Buang perubahan', 'Hapus', 'Discard', 'Discard changes', 'Delete draft'], // jangan pernah diklik
     kondisiOpsi: {
       'baru': ['Baru', 'New'],
       'bekas - seperti baru': ['Bekas - Seperti Baru', 'Used - Like New'],
@@ -185,6 +190,15 @@
     el.blur();
   }
 
+  /** Seperti cariTombol, tetapi terbatas pada satu wadah (mis. dialog konfirmasi). */
+  function cariTombolDi(wadah, varian) {
+    const v = varian.map(norm);
+    return [...wadah.querySelectorAll('[role="button"], button')].filter(terlihat).find((b) => {
+      const n = norm(b.getAttribute('aria-label') || b.innerText);
+      return v.indexOf(n) >= 0;
+    }) || null;
+  }
+  const dialogTerakhir = () => [...document.querySelectorAll('[role="dialog"], [role="alertdialog"]')].filter(terlihat).pop() || null;
   function klikAsli(el) {
     el.scrollIntoView({ block: 'center' });
     ['pointerdown', 'mousedown', 'pointerup', 'mouseup'].forEach((t) => el.dispatchEvent(new MouseEvent(t, { bubbles: true, cancelable: true, view: window })));
@@ -508,6 +522,45 @@
     await isiDeskripsiLokasi(t);
   }
 
+  // ---------------------------------------------------------- simpan sebagai draf
+
+  /**
+   * Menyimpan iklan sebagai draf Marketplace tanpa menerbitkannya.
+   * Dua jalur: tombol "Simpan draf" bila Facebook menyediakannya di formulir, atau
+   * menutup formulir lalu memilih "Simpan draf" pada dialog yang muncul.
+   * Tombol "Buang" tidak pernah disentuh — lebih baik gagal daripada isian hilang.
+   */
+  async function simpanDraf() {
+    await langkah('menyimpan sebagai draf');
+    const langsung = cariTombol(PENANDA.simpanDrafLangsung);
+    if (tombolAktif(langsung)) {
+      klikAsli(langsung);
+    } else {
+      const tutup = cariTombol(PENANDA.tutupFormulir);
+      if (tutup) klikAsli(tutup);
+      else document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, which: 27, bubbles: true }));
+      const tombol = await tunggu(() => {
+        const dlg = dialogTerakhir();
+        if (!dlg) return null;
+        const b = cariTombolDi(dlg, PENANDA.simpanDraf);
+        return tombolAktif(b) ? b : null;
+      }, 15000, null).catch(() => {
+        const dlg = dialogTerakhir();
+        const pilihan = dlg
+          ? [...dlg.querySelectorAll('[role="button"], button')].filter(terlihat).map((b) => norm(b.getAttribute('aria-label') || b.innerText)).filter(Boolean).slice(0, 8)
+          : [];
+        throw new Error('Facebook tidak menawarkan "Simpan draf" saat formulir ditutup. ' +
+          (pilihan.length ? 'Pilihan yang muncul: ' + pilihan.join(', ') + '. ' : 'Tidak ada dialog yang muncul. ') +
+          'Isian tidak dibuang; periksa jendela Facebook, atau pakai "Terbitkan langsung" di Pengaturan.');
+      });
+      klikAsli(tombol);
+    }
+    // Draf dianggap tersimpan bila Facebook sudah menutup formulirnya.
+    await tunggu(() => !/\/marketplace\/create/.test(location.pathname) || !dialogTerakhir(), 20000,
+      'Sudah memilih "Simpan draf", tetapi Facebook belum menutup formulirnya dalam 20 detik.');
+    await jeda(1500);
+  }
+
   // ---------------------------------------------------------- alur utama
 
   let sedangJalan = false;
@@ -521,6 +574,23 @@
       }
       if (t.jenis === 'kendaraan') await isiKendaraan(t);
       else await isiBarang(t);
+
+      // Mode draf: berhenti di sini, iklan disimpan tetapi tidak diterbitkan.
+      if (t.draf) {
+        await langkah('memeriksa kelengkapan formulir');
+        const lengkap = await tunggu(() => tombolAktif(cariTombol(PENANDA.terbitkan)) || tombolAktif(cariTombol(PENANDA.berikutnya)), 25000, null)
+          .then(() => true).catch(() => false);
+        // Draf yang belum lengkap tetap berguna: pemilik bisa melengkapinya sendiri sebelum menerbitkan.
+        if (!lengkap) peringatan.push('draf disimpan walau tombol Berikutnya/Terbitkan belum aktif — ' + ringkasKeadaan());
+        await simpanDraf();
+        tampilkan('Tersimpan sebagai draf 📝 — terbitkan sendiri lewat Marketplace → Anda → Draf.', 'ok');
+        await kirim({
+          jenis: 'hasil', hasil: 'draf',
+          pesan: (lengkap ? 'Formulir terisi lengkap dan disimpan sebagai draf.' : 'Disimpan sebagai draf, tetapi belum lengkap.') +
+            (peringatan.length ? ' Catatan: ' + peringatan.join('; ') : '')
+        });
+        return;
+      }
 
       // Berikutnya → … → Terbitkan
       for (let putaran = 0; putaran < 4; putaran++) {

@@ -13,7 +13,7 @@ process.env.SUMBER_DATA = 'berkas';
 
 const { uraiCsv, urlCsv, ringkasTabel, ambilDariUrl, uraiBerkas } = await import('../lib/sheet.js');
 const { tebakPemetaan, susunImpor, nilaiSumber, rapikanNilai } = await import('../lib/impor.js');
-const { rapikanIklan, periksaIklan, jumlahFoto, STATUS } = await import('../lib/iklan.js');
+const { rapikanIklan, periksaIklan, jumlahFoto, STATUS, caraAkhir } = await import('../lib/iklan.js');
 const { db, setelanLengkap } = await import('../lib/data/index.js');
 const { prosesEkstensi, hitunganHariIni, alamatGambar, unduhGambar } = await import('../lib/ekstensi.js');
 const { dariInput, formatWaktu, untukInput } = await import('../lib/waktu.js');
@@ -172,6 +172,22 @@ cek(!batas.tugas && /Batas 2 posting/.test(batas.tunggu || ''), 'batas harian di
 await kirim({ aksi: 'rekam', diagnosa: { url: 'https://www.facebook.com/marketplace/create/vehicle', pilihan: { merek: ['Daihatsu', 'Toyota'] } } });
 const log = await db().daftarLog(10);
 cek(log.some((l) => l.jenis === 'rekaman' && /vehicle/.test(l.pesan)) && log.some((l) => l.jenis === 'terbit'), 'log mencatat rekaman & riwayat status', log.map((l) => l.jenis));
+
+// ---- Mode draf: iklan disimpan di Facebook tetapi tidak diterbitkan
+bagian('Mode draf Facebook');
+cek(caraAkhir({ modeUji: true }) === 'uji' && caraAkhir({ modeUji: false }) === 'terbit' && caraAkhir({ akhir: 'draf', modeUji: true }) === 'draf',
+  'setelan lama tanpa akhir tetap terbaca (modeUji jadi cadangan)');
+await db().simpanSetelan({ akhir: 'draf', modeUji: false, postTerakhir: '', hitungHarian: '', batasHarian: 10 });
+await db().simpanIklan({ ...mobil, status: STATUS.TERJADWAL, jadwal: dulu, token: null, hasilUrl: '' });
+const pingDraf = await kirim({ aksi: 'ping' });
+cek(pingDraf.akhir === 'draf' && pingDraf.draf === true && pingDraf.uji === false, 'ping memberi tahu ekstensi bahwa mode draf aktif', pingDraf);
+const aDraf = await kirim({ aksi: 'ambil' });
+cek(aDraf.tugas && aDraf.tugas.draf === true && aDraf.tugas.uji === false, 'tugas membawa penanda draf', aDraf.tugas && { draf: aDraf.tugas.draf, uji: aDraf.tugas.uji });
+const lDraf = await kirim({ aksi: 'lapor', id: mobil.id, token: aDraf.tugas.token, hasil: 'draf' });
+const stDraf = await db().ambilIklan(mobil.id);
+cek(lDraf.status === STATUS.DRAF_FB && /draf di Facebook Marketplace/i.test(stDraf.keterangan) && stDraf.hasilUrl.includes('marketplace/you'),
+  'lapor draf → status Draf di Facebook + tautan ke daftar draf', [stDraf.status, stDraf.keterangan]);
+cek(hitunganHariIni(await setelanLengkap()) === 1, 'draf ikut dihitung pada jeda & batas harian');
 
 // ================================================================ XLSX
 bagian('Unggahan XLSX');

@@ -4,6 +4,7 @@ import { db, setelanLengkap } from '../../lib/data/index.js';
 import { simpanSetelanForm, buatKunciEkstensi } from '../../lib/aksi.js';
 import { hitunganHariIni } from '../../lib/ekstensi.js';
 import { relatif } from '../../lib/waktu.js';
+import { caraAkhir } from '../../lib/iklan.js';
 import Salin from '../../components/Salin.jsx';
 
 export const dynamic = 'force-dynamic';
@@ -14,6 +15,7 @@ export default async function Pengaturan({ searchParams }) {
   const setelan = await setelanLengkap();
   const h = await headers();
   const asal = (h.get('x-forwarded-proto') || 'https') + '://' + (h.get('x-forwarded-host') || h.get('host') || 'localhost:3110');
+  const akhir = caraAkhir(setelan);
   const urlApi = asal + '/api/ekstensi';
 
   return (
@@ -53,11 +55,17 @@ export default async function Pengaturan({ searchParams }) {
         <div className="grid k2">
           <div className="kartu">
             <h3>Cara posting</h3>
-            <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontWeight: 400 }}>
-              <input type="checkbox" name="modeUji" defaultChecked={setelan.modeUji} style={{ width: 'auto', marginTop: 3 }} />
-              <span><b>Mode uji</b> — ekstensi mengisi formulir sampai halaman terakhir tetapi <b>tidak</b> menekan Terbitkan.
-                Matikan setelah yakin isiannya benar.</span>
-            </label>
+            <label>Setelah formulir terisi, ekstensi…</label>
+            {[
+              ['uji', <><b>Mode uji</b> — berhenti di halaman terakhir, tidak menekan apa pun. Pakai ini saat pertama kali mencoba.</>],
+              ['draf', <><b>Simpan sebagai draf di Facebook</b> — iklan masuk ke Marketplace → Anda → Draf, belum tayang. Pemilik akun yang menerbitkannya sendiri.</>],
+              ['terbit', <><b>Terbitkan langsung</b> — iklan langsung tayang di Marketplace.</>]
+            ].map(([nilai, teks]) => (
+              <label key={nilai} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontWeight: 400, marginBottom: 6 }}>
+                <input type="radio" name="akhir" value={nilai} defaultChecked={akhir === nilai} style={{ width: 'auto', marginTop: 3 }} />
+                <span>{teks}</span>
+              </label>
+            ))}
             <div className="grid k2" style={{ gap: '0 12px' }}>
               <div>
                 <label htmlFor="jedaMenit">Jeda antar posting (menit)</label>

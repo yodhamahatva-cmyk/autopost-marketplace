@@ -131,6 +131,24 @@ async function tungguHasil(page, ms) {
       'tombol tetap mati → pesan menyebut jumlah foto & kolom yang masih kosong', pm);
     await p.close();
 
+    console.log('■ Simpan sebagai draf');
+    p = await buka(browser, '/marketplace/create/vehicle?skenario=draf');
+    r = await tungguHasil(p, 90000);
+    const draf = await p.evaluate(() => ({ draf: window.__draf, buang: window.__buangDiklik, path: location.pathname }));
+    cek(r.hasil && r.hasil.hasil === 'draf' && !r.terbitDiklik && draf.draf && draf.draf.merek === 'Daihatsu' && draf.draf.foto === 3,
+      'mode draf: formulir terisi penuh lalu disimpan sebagai draf, Terbitkan tidak diklik', { hasil: r.hasil, draf: draf.draf });
+    cek(!draf.buang && draf.path === '/marketplace/you/selling', 'tombol "Buang" tidak pernah disentuh & formulir ditutup', draf);
+    cek(/lengkap/.test((r.hasil && r.hasil.pesan) || ''), 'hasil draf menyebut formulirnya lengkap', r.hasil && r.hasil.pesan);
+    await p.close();
+
+    p = await buka(browser, '/marketplace/create/vehicle?skenario=draf-tanpa-pilihan');
+    r = await tungguHasil(p, 90000);
+    const buang = await p.evaluate(() => window.__buangDiklik);
+    const pd = (r.hasil && r.hasil.pesan) || '';
+    cek(r.hasil && r.hasil.hasil === 'gagal' && /tidak menawarkan "Simpan draf"/.test(pd) && /buang/.test(pd) && !buang,
+      'Facebook tanpa pilihan draf → gagal apa adanya, isian tidak dibuang', pd);
+    await p.close();
+
     console.log('■ Foto');
     p = await buka(browser, '/marketplace/create/item?skenario=foto-rusak');
     r = await tungguHasil(p, 45000);

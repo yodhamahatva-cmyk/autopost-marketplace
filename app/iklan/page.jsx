@@ -55,7 +55,7 @@ export default async function DaftarIklan({ searchParams }) {
                     <td style={{ whiteSpace: 'nowrap' }}>{rupiah(x.harga)}</td>
                     <td style={{ whiteSpace: 'nowrap' }} className="kecil">{x.jadwal ? formatWaktu(x.jadwal, setelan.zona) : '—'}<div>{x.cara === 'manual' ? 'pasang manual' : 'otomatis'}</div></td>
                     <td><span className={'lencana l-' + x.status}>{LABEL_STATUS[x.status]}</span>
-                      {x.hasilUrl && <div className="kecil"><a href={x.hasilUrl} target="_blank" rel="noopener">lihat di FB</a></div>}</td>
+                      {x.hasilUrl && <div className="kecil"><a href={x.hasilUrl} target="_blank" rel="noopener">{x.status === 'draf-fb' ? 'buka draf di FB' : 'lihat di FB'}</a></div>}</td>
                     <td><BarisAksi id={x.id} status={x.status} siap={cek.siap} /></td>
                   </tr>
                 );

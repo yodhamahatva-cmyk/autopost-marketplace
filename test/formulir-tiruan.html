@@ -6,7 +6,8 @@
 <!--
   Tiruan formulir "Buat Tawaran" Facebook Marketplace untuk menguji ekstensi-chrome/isi-formulir.js
   tanpa menyentuh Facebook sungguhan. Buka lewat server pratinjau di jalur /marketplace/create/item
-  dengan ?skenario=uji | terbit | kategori-salah | subkategori | login.
+  dengan ?skenario=uji | terbit | kategori-salah | subkategori | login | kendaraan | tombol-mati |
+  draf | draf-tanpa-pilihan | foto-rusak | deskripsi-terpotong | rekam.
   Perilaku yang ditiru: state gaya React (nilai hanya "terhitung" bila event input terpicu),
   combobox + listbox, input file tersembunyi, tombol Berikutnya nonaktif sampai isian wajib lengkap,
   halaman kedua dengan tombol Terbitkan, lalu pindah ke /marketplace/you/selling.
@@ -52,7 +53,45 @@
     kategori: skenario === 'kategori-salah' ? 'Meja Makan' : skenario === 'subkategori' ? 'Rumah & Taman > Perabotan' : 'Perabotan',
     kondisi: 'Bekas - Baik', lokasi: 'Besuki', deskripsi: 'Kursi rotan kokoh.\nBisa COD area Besuki.', jumlahFoto: 2
   };
+  // Skenario draf: iklan diisi lalu disimpan sebagai draf Facebook, bukan diterbitkan.
+  if (skenario.indexOf('draf') === 0) { TUGAS.uji = false; TUGAS.draf = true; }
   const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+  // ---------------- tombol tutup + dialog "Simpan draf" (seperti Facebook saat formulir ditinggalkan)
+  window.__draf = null;
+  window.__buangDiklik = false;
+  function pasangTombolTutup() {
+    if (skenario.indexOf('draf') < 0 || document.getElementById('tutup')) return;
+    const t = document.createElement('div');
+    t.id = 'tutup';
+    t.setAttribute('role', 'button');
+    t.setAttribute('aria-label', 'Tutup');
+    t.style.cssText = 'position:fixed;right:16px;top:16px;margin:0';
+    t.textContent = '✕';
+    t.addEventListener('click', bukaDialogDraf);
+    document.body.appendChild(t);
+  }
+  function bukaDialogDraf() {
+    if (document.querySelector('[role=dialog]')) return;
+    const d = document.createElement('div');
+    d.setAttribute('role', 'dialog');
+    d.style.cssText = 'position:fixed;left:50%;top:40%;transform:translate(-50%,-50%);background:#fff;padding:20px;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,.3);z-index:9';
+    // Skenario "draf-tanpa-pilihan": Facebook hanya menawarkan Buang & Batal.
+    const tombolDraf = skenario === 'draf-tanpa-pilihan' ? '' : '<div role="button" aria-label="Simpan draf" id="simpanDraf">Simpan draf</div> ';
+    d.innerHTML = '<h3>Simpan tawaran ini sebagai draf?</h3>' + tombolDraf +
+      '<div role="button" aria-label="Buang" id="buangDraf">Buang</div> <div role="button" aria-label="Batal">Batal</div>';
+    document.body.appendChild(d);
+    const sd = document.getElementById('simpanDraf');
+    if (sd) sd.addEventListener('click', () => {
+      window.__draf = MODE_KENDARAAN ? Object.assign({}, sk) : Object.assign({}, state);
+      window.__state = window.__draf;
+      log('DRAF DISIMPAN: ' + JSON.stringify(window.__draf));
+      d.remove();
+      history.pushState({}, '', '/marketplace/you/selling');
+      document.getElementById('app').innerHTML = '<h2>Draf Anda tersimpan</h2>';
+    });
+    document.getElementById('buangDraf').addEventListener('click', () => { window.__buangDiklik = true; log('BUANG DIKLIK (seharusnya tidak pernah)'); });
+  }
+
   const stub = {
     lastError: undefined,
     onMessage: { addListener(fn) { window.__pendengar = fn; } },  // dipakai uji "hidup" & "rekam"
@@ -238,9 +277,13 @@
     document.getElementById('app').innerHTML = '<h2>Masuk ke Facebook</h2><input name="email"><input name="pass" type="password">';
   } else if (MODE_KENDARAAN) {
     setTimeout(kendaraan1, 800);
+    setTimeout(pasangTombolTutup, 900);
   } else {
     setTimeout(halaman1, 800); // formulir muncul belakangan, seperti aplikasi React
+    setTimeout(pasangTombolTutup, 900);
   }
+  // Facebook juga membuka dialog yang sama bila formulir ditutup dengan Escape.
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && skenario.indexOf('draf') === 0) bukaDialogDraf(); });
 </script>
 <script src="/repo/ekstensi-chrome/isi-formulir.js"></script>
 </body>

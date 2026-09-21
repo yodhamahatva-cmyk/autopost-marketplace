@@ -53,6 +53,9 @@ cek(/Tipe body/.test(pengisi) && /Keterangan/.test(pengisi) && /Warna eksterior/
   'penanda mengikuti label asli Facebook (Tipe body, Keterangan, Warna eksterior)');
 cek(/btoa\(/.test(folder) && /GAMBAR/.test(folder), 'pembaca folder mengubah gambar menjadi base64');
 cek(/function tandaGambar/.test(pengisi) && /bukan berkas gambar/.test(pengisi), 'berkas yang bukan gambar ditolak sebelum diunggah ke Facebook');
+cek(/async function simpanDraf/.test(pengisi) && /t\.draf/.test(pengisi), 'mode draf: formulir disimpan sebagai draf, bukan diterbitkan');
+cek(/jangan pernah diklik/.test(pengisi) && !/klikAsli\(cariTombol\(PENANDA\.buang/.test(pengisi), 'tombol Buang hanya didaftarkan sebagai larangan, tidak pernah diklik');
+cek(/hasil: 'draf'/.test(pengisi) && /draf: '📝/.test(latar), 'hasil draf dikirim ke pekerja latar & dasbor');
 cek(/ringkasKeadaan\(\)/.test(pengisi) && /Keadaan formulir saat itu/.test(pengisi), 'tombol yang tetap mati dilaporkan bersama keadaan kolom & foto');
 
 console.log('\n' + (gagal ? '❌' : '✅') + ' ' + lulus + ' lulus, ' + gagal + ' gagal');
