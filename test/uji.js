@@ -216,6 +216,22 @@ cek(mobilTemplat.kendaraan.warna === 'Kuning' && mobilTemplat.kendaraan.tipeBodi
   'nilai baris contoh masuk ke tempat yang benar', mobilTemplat.kendaraan);
 cek(fs.readFileSync(BERKAS_PILIHAN, 'utf8') === isiPilihan(), 'daftar pilihan nilai masih sama dengan aturan aplikasi (jalankan node templat/buat-templat.js bila beda)');
 
+// Satu berkas untuk semuanya: tab Stok + Pilihan Nilai + Petunjuk
+const { BERKAS_XLSX, NAMA_TAB, barisMatriks } = await import('../templat/buat-templat.js');
+const bukuXlsx = (await import('xlsx')).read(fs.readFileSync(BERKAS_XLSX), { type: 'buffer' });
+cek(bukuXlsx.SheetNames.join('|') === [NAMA_TAB.stok, NAMA_TAB.pilihan, NAMA_TAB.petunjuk].join('|'),
+  'XLSX berisi tiga tab dengan Stok di urutan pertama (itu yang dibaca aplikasi)', bukuXlsx.SheetNames);
+const dariXlsxTemplat = uraiBerkas('templat.xlsx', fs.readFileSync(BERKAS_XLSX));
+cek(dariXlsxTemplat[0].join('|') === KOLOM_TEMPLAT.join('|') && dariXlsxTemplat.length === 4,
+  'unggahan XLSX terbaca sebagai tabel stok yang sama dengan CSV', dariXlsxTemplat.length);
+const imporXlsx = susunImpor(dariXlsxTemplat, { peta: tebakPemetaan(ringkasTabel(dariXlsxTemplat).kolom), barisAwal: 2, mulai, jedaMenit: 30 });
+cek(imporXlsx.hasil.length === 3 && imporXlsx.hasil.every((h) => !h.masalah.length) &&
+  imporXlsx.hasil[0].iklan.kendaraan.model === 'Ayla 1.0 X' && imporXlsx.hasil[0].iklan.kendaraan.warna === 'Kuning',
+  'impor dari XLSX menghasilkan iklan yang sama persis', imporXlsx.hasil.map((h) => h.masalah));
+const matriks = barisMatriks();
+cek(matriks[0][0] === 'Jenis Kendaraan' && matriks[1][2] === 'Hitam' && matriks.length === 14,
+  'tab Pilihan Nilai berbentuk tabel (siap dipakai Validasi data → Dari rentang)', matriks[0]);
+
 // ---- Header dealer yang mudah tertukar
 const kolomJebakan = ['No Polisi', 'Merk', 'Model', 'Varian', 'Tahun', 'Jenis Bahan Bakar', 'Tipe Body', 'Warna', 'Warna Interior', 'Jenis Kendaraan']
   .map((j, i) => ({ huruf: String.fromCharCode(65 + i), judul: j }));

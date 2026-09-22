@@ -3,7 +3,7 @@
 Dasbor web untuk menjadwalkan dan memasang iklan **Facebook Marketplace**: impor stok dari **Google Sheet** (tanpa akun Google), atur jadwal, lalu **ekstensi Chrome** memasang iklannya di Chrome Anda yang sudah login.
 
 - **Tanpa Google Drive.** Foto boleh diunggah ke aplikasi, diambil dari **folder di komputer** (dibaca langsung oleh ekstensi, tidak diunggah ke mana pun), atau berupa URL gambar.
-- **Impor Google Sheet** lewat link berbagi/publikasi, atau unggah CSV/XLSX. Pemetaan kolom ditebak dari nama header — ada **templat sheet siap pakai** (`public/templat-stok-kendaraan.csv`) yang urutan kolomnya persis formulir kendaraan Facebook.
+- **Impor Google Sheet** lewat link berbagi/publikasi, atau unggah CSV/XLSX. Pemetaan kolom ditebak dari nama header — ada **templat sheet siap pakai** (`public/templat-stok-kendaraan.xlsx` — tab Stok + Pilihan Nilai + Petunjuk) yang urutan kolomnya persis formulir kendaraan Facebook.
 - **Anti isian tertukar**: penebak kolom menilai semua kemungkinan (Varian ≠ Model, Jenis Bahan Bakar ≠ Jenis Kendaraan, Warna Interior ≠ Warna eksterior), dan ekstensi mencocokkan ulang seluruh isian sebelum iklan dipasang.
 - **Iklan kendaraan** memakai formulir khusus Facebook (Jenis kendaraan, Tahun, Merek, Model, Jarak tempuh, Tipe body, Warna eksterior).
 - **Tiga cara menutup formulir**: mode uji (mengisi tanpa menekan apa pun), **simpan sebagai draf di Facebook** (pemilik akun yang menerbitkan sendiri), atau terbitkan langsung.
@@ -21,7 +21,7 @@ Dasbor web untuk menjadwalkan dan memasang iklan **Facebook Marketplace**: impor
 | `lib/data/` | penyimpanan: `supabase.js` (produksi) atau `berkas.js` (folder lokal) |
 | `ekstensi-chrome/` | ekstensi Chrome (Manifest V3) pengisi formulir Marketplace |
 | `public/` | templat sheet yang bisa diunduh dari halaman Impor |
-| `templat/buat-templat.js` | membuat `public/templat-pilihan-nilai.csv` dari daftar resmi di `lib/iklan.js` |
+| `templat/buat-templat.js` | membuat templat XLSX 3 tab + CSV pilihan nilai dari daftar resmi di `lib/iklan.js` |
 | `skema.sql` | tabel + bucket Supabase |
 | `test/` | `uji.js` (inti, tanpa server) dan `uji-api.js` (HTTP ke server berjalan) |
 

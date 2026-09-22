@@ -55,12 +55,19 @@ Tiga bagian yang bekerja bersama:
 
 ### Templat sheet (paling aman dari salah kolom)
 
-Di dasbor → **Impor** ada dua tombol unduh:
+Di dasbor → **Impor**, unduh **Templat lengkap (XLSX)**. Satu berkas, tiga tab:
 
-- **Templat stok (CSV)** — urutan kolomnya persis formulir kendaraan Facebook.
-- **Daftar pilihan nilai** — isi sah untuk Jenis Kendaraan, Tipe Bodi, Warna, Kondisi, Bahan Bakar, Transmisi.
+| Tab | Isi |
+|---|---|
+| **Stok** | tempat Anda mengisi; urutan kolomnya persis formulir kendaraan Facebook. Tab inilah yang dibaca aplikasi saat diunggah — biarkan tetap paling depan |
+| **Pilihan Nilai** | satu kolom per isian berisi nilai yang sah (Jenis Kendaraan, Tipe Bodi, Warna, Kondisi, Bahan Bakar, Transmisi) |
+| **Petunjuk** | penjelasan singkat tiap kolom |
 
-Cara pakai: buka Google Sheet baru → **File → Impor → Unggah** → pilih templatnya → *Ganti spreadsheet* → ganti barisnya dengan stok Anda. Jangan mengubah baris header; menambah kolom sendiri di sebelah kanan boleh.
+Cara pakai: Google Sheet baru → **File → Impor → Unggah** → pilih templatnya → *Ganti spreadsheet* → ganti barisnya dengan stok Anda. Jangan mengubah baris header; menambah kolom sendiri di sebelah kanan boleh.
+
+**Dropdown seperti di Facebook (opsional).** Blok satu kolom di tab Stok → **Data → Validasi data** → *Kriteria: Dari rentang* → tunjuk kolom yang sesuai di tab **Pilihan Nilai**. Setelah itu isian yang salah ketik langsung ketahuan.
+
+Versi CSV-nya (tab Stok saja, dan petunjuk kolom saja) tetap disediakan untuk yang memakai Excel/Notepad — CSV memang hanya bisa memuat satu tab, karena itu terpisah.
 
 | Kolom | Wajib | Catatan |
 |---|---|---|
@@ -155,7 +162,7 @@ Catatan: menyimpan draf tetap membuka formulir baru di Facebook, jadi **jeda ant
 
 ## Untuk pengembang
 
-- `npm run uji` menjalankan pemeriksaan inti + kontrak Supabase + berkas ekstensi (64 + 33 + 31) (CSV/XLSX, impor, aturan iklan, protokol ekstensi) tanpa server dan tanpa akun apa pun; data uji ditulis ke folder sementara.
+- `npm run uji` menjalankan pemeriksaan inti + kontrak Supabase + berkas ekstensi (68 + 33 + 31) (CSV/XLSX, impor, aturan iklan, protokol ekstensi) tanpa server dan tanpa akun apa pun; data uji ditulis ke folder sementara.
 - `node test/uji-api.js` menguji HTTP terhadap server yang sedang berjalan (`npm run dev`), termasuk alur ekstensi ujung-ke-ujung.
 - `node test/uji-supabase.js` menguji adaptor Supabase memakai tiruan yang **membaca skema.sql** dan menolak kolom/tipe yang tidak cocok — menangkap ketidakcocokan kolom tanpa perlu akun Supabase.
 - Lapisan data bisa ditukar lewat `SUMBER_DATA`: `supabase` atau `berkas` (folder `./data`). Antarmukanya sama, jadi aplikasi ini bisa dijalankan tanpa Supabase bila perlu.
