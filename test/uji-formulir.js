@@ -131,6 +131,27 @@ async function tungguHasil(page, ms) {
       'tombol tetap mati → pesan menyebut jumlah foto & kolom yang masih kosong', pm);
     await p.close();
 
+    console.log('■ Isian tidak tertukar');
+    p = await buka(browser, '/marketplace/create/vehicle?skenario=warna-terbalik');
+    r = await tungguHasil(p, 90000);
+    cek(r.hasil && r.hasil.hasil === 'uji' && r.state && r.state.warna === 'Kuning' && r.state.warnaDalam === '',
+      'Warna Interior muncul lebih dulu → warna tetap masuk ke Warna eksterior', r.state && { warna: r.state.warna, dalam: r.state.warnaDalam });
+    await p.close();
+
+    p = await buka(browser, '/marketplace/create/vehicle?skenario=kolom-direset');
+    r = await tungguHasil(p, 90000);
+    cek(r.hasil && r.hasil.hasil === 'uji' && r.state && r.state.model === 'Ayla 1.0 X',
+      'kolom yang direset Facebook ketahuan lalu diisi ulang', r.state && r.state.model);
+    cek(/Model sempat berubah sendiri/.test((r.hasil && r.hasil.pesan) || ''), 'perbaikan itu dicatat pada hasil', r.hasil && r.hasil.pesan);
+    await p.close();
+
+    p = await buka(browser, '/marketplace/create/vehicle?skenario=kolom-direset-terus');
+    r = await tungguHasil(p, 90000);
+    const pt = (r.hasil && r.hasil.pesan) || '';
+    cek(r.hasil && r.hasil.hasil === 'gagal' && /Isian tidak sesuai/.test(pt) && /Model/.test(pt) && !r.terbitDiklik,
+      'kolom yang terus kosong → iklan TIDAK diteruskan, kolomnya disebut', pt);
+    await p.close();
+
     console.log('■ Simpan sebagai draf');
     p = await buka(browser, '/marketplace/create/vehicle?skenario=draf');
     r = await tungguHasil(p, 90000);

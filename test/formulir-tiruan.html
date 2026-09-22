@@ -226,8 +226,10 @@
       <label><span class="l">Harga</span><input type="text" inputmode="numeric" data-v="harga"></label>
       <h3>Tampilan dan fitur kendaraan</h3>
       <label role="combobox" aria-haspopup="listbox" tabindex="0" id="kBody"><span class="l">Tipe body</span><span class="nilai"></span></label>
-      <label role="combobox" aria-haspopup="listbox" tabindex="0" id="kWarna"><span class="l">Warna eksterior</span><span class="nilai"></span></label>
-      <label role="combobox" aria-haspopup="listbox" tabindex="0" id="kWarnaDalam"><span class="l">Warna Interior</span><span class="nilai"></span></label>
+      ${[
+        '<label role="combobox" aria-haspopup="listbox" tabindex="0" id="kWarna"><span class="l">Warna eksterior</span><span class="nilai"></span></label>',
+        '<label role="combobox" aria-haspopup="listbox" tabindex="0" id="kWarnaDalam"><span class="l">Warna Interior</span><span class="nilai"></span></label>'
+      ][skenario === 'warna-terbalik' ? 'reverse' : 'slice']().join('')}
       <h3>Detail kendaraan</h3>
       <label role="combobox" aria-haspopup="listbox" tabindex="0" id="kKondisi"><span class="l">Kondisi kendaraan</span><span class="nilai"></span></label>
       <label role="combobox" aria-haspopup="listbox" tabindex="0" id="kBbm"><span class="l">Jenis bahan bakar</span><span class="nilai"></span></label>
@@ -243,7 +245,18 @@
     pasang('kWarnaDalam', ['Hitam', 'Abu-abu', 'Krem'], 'warnaDalam');
     pasang('kKondisi', ['Sangat baik', 'Baik', 'Cukup', 'Buruk'], 'kondisi');
     pasang('kBbm', ['Bensin', 'Diesel', 'Listrik', 'Hibrida', 'Lainnya'], 'bbm');
-    pasang('kTrans', ['Transmisi manual', 'Transmisi otomatis'], 'transmisi');
+    if (skenario.indexOf('kolom-direset') === 0) {
+      // Facebook kadang mengosongkan kolom lain setelah sebuah pilihan berubah.
+      comboBox('kTrans', () => ['Transmisi manual', 'Transmisi otomatis'], (v, k) => {
+        sk.transmisi = v; k.querySelector('.nilai').textContent = v;
+        const kosongkanModel = () => { const el = document.querySelector('[data-v=model]'); if (el) { el.value = ''; sk.model = ''; log('MODEL DIRESET oleh formulir'); cekK(); } };
+        kosongkanModel();
+        if (skenario === 'kolom-direset-terus') setInterval(kosongkanModel, 400);
+        cekK();
+      });
+    } else {
+      pasang('kTrans', ['Transmisi manual', 'Transmisi otomatis'], 'transmisi');
+    }
     document.querySelectorAll('[data-v]').forEach((el) => el.addEventListener('input', () => {
       let v = el.value;
       if (el.dataset.v === 'harga' || el.dataset.v === 'jarak') { const d = v.replace(/\D/g, ''); v = d; el.value = d ? Number(d).toLocaleString('id-ID') : ''; }

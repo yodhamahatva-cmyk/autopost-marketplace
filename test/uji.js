@@ -189,6 +189,42 @@ cek(lDraf.status === STATUS.DRAF_FB && /draf di Facebook Marketplace/i.test(stDr
   'lapor draf → status Draf di Facebook + tautan ke daftar draf', [stDraf.status, stDraf.keterangan]);
 cek(hitunganHariIni(await setelanLengkap()) === 1, 'draf ikut dihitung pada jeda & batas harian');
 
+// ---- Templat Google Sheet resmi: harus terpetakan 100% tanpa diutak-atik
+bagian('Templat sheet kendaraan');
+const { KOLOM_TEMPLAT, isiPilihan, BERKAS_PILIHAN, BERKAS_STOK } = await import('../templat/buat-templat.js');
+const isiTemplat = fs.readFileSync(BERKAS_STOK, 'utf8');
+const tabelTemplat = uraiCsv(isiTemplat);
+cek(tabelTemplat[0].join('|') === KOLOM_TEMPLAT.join('|'), 'header templat sama dengan daftar kolom resmi', tabelTemplat[0]);
+const ringkasTemplat = ringkasTabel(tabelTemplat);
+const petaTemplat = tebakPemetaan(ringkasTemplat.kolom);
+const HARUS = {
+  kunci: 'A', jenisKendaraan: 'B', tahun: 'C', merek: 'D', model: 'E', jarakTempuh: 'F', harga: 'G',
+  tipeBodi: 'H', warna: 'I', kondisi: 'J', bahanBakar: 'K', transmisi: 'L', lokasi: 'M', deskripsi: 'N',
+  fotoFolder: 'O', fotoUrl: 'P'
+};
+const salahPeta = Object.entries(HARUS).filter(([k, h]) => (petaTemplat[k] || {}).kolom !== h)
+  .map(([k, h]) => k + ' → ' + ((petaTemplat[k] || {}).kolom || '-') + ' (harusnya ' + h + ')');
+cek(!salahPeta.length, 'setiap kolom templat terpetakan ke isian yang benar', salahPeta);
+const imporTemplat = susunImpor(tabelTemplat, { peta: petaTemplat, barisAwal: 2, mulai, jedaMenit: 30, cara: 'otomatis', status: 'terjadwal' });
+cek(imporTemplat.hasil.length === 3 && imporTemplat.hasil.every((h) => !h.masalah.length), '3 baris contoh langsung lolos pemeriksaan',
+  imporTemplat.hasil.map((h) => h.masalah));
+const motor = imporTemplat.hasil[2].iklan;
+cek(motor.kendaraan.jenis === 'Sepeda Motor' && !motor.kendaraan.tipeBodi && periksaIklan(motor).siap, 'sepeda motor sah tanpa Tipe Bodi', periksaIklan(motor).galat);
+const mobilTemplat = imporTemplat.hasil[0].iklan;
+cek(mobilTemplat.kendaraan.warna === 'Kuning' && mobilTemplat.kendaraan.tipeBodi === 'Hatchback' && mobilTemplat.kendaraan.model === 'Ayla 1.0 X' &&
+  mobilTemplat.kendaraan.bahanBakar === 'Bensin' && mobilTemplat.kendaraan.jarakTempuh === 15770 && mobilTemplat.foto.tipe === 'folder',
+  'nilai baris contoh masuk ke tempat yang benar', mobilTemplat.kendaraan);
+cek(fs.readFileSync(BERKAS_PILIHAN, 'utf8') === isiPilihan(), 'daftar pilihan nilai masih sama dengan aturan aplikasi (jalankan node templat/buat-templat.js bila beda)');
+
+// ---- Header dealer yang mudah tertukar
+const kolomJebakan = ['No Polisi', 'Merk', 'Model', 'Varian', 'Tahun', 'Jenis Bahan Bakar', 'Tipe Body', 'Warna', 'Warna Interior', 'Jenis Kendaraan']
+  .map((j, i) => ({ huruf: String.fromCharCode(65 + i), judul: j }));
+const petaJebakan = tebakPemetaan(kolomJebakan);
+cek(petaJebakan.model.kolom === 'C' && petaJebakan.bahanBakar.kolom === 'F' && petaJebakan.tipeBodi.kolom === 'G' &&
+  petaJebakan.warna.kolom === 'H' && petaJebakan.jenisKendaraan.kolom === 'J',
+  'header mirip tidak tertukar: Varian≠Model, Jenis Bahan Bakar≠Jenis Kendaraan, Warna Interior≠Warna',
+  Object.fromEntries(Object.entries(petaJebakan).map(([k, v]) => [k, v.kolom])));
+
 // ================================================================ XLSX
 bagian('Unggahan XLSX');
 const XLSX = await import('xlsx');

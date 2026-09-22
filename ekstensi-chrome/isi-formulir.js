@@ -127,16 +127,55 @@
     return nama;
   }
 
-  function cariIsian(varian) {
-    const semua = [...document.querySelectorAll(SELEKTOR_ISIAN)].filter(terlihat);
+  /**
+   * Kata yang tidak boleh ada pada nama kolom untuk penanda tertentu. Tanpa ini
+   * "Warna eksterior" bisa mendarat di "Warna Interior" lewat pencocokan awalan.
+   */
+  const HINDARI = {
+    warna: ['interior', 'dalam', 'kabin', 'jok'],
+    model: ['tipe body', 'tipe bodi', 'gaya bodi'],
+    jenisKendaraan: ['bahan bakar'],
+    kondisi: ['kendaraan']
+  };
+
+  /** Kolom yang sudah diisi tidak boleh dipakai lagi oleh isian berikutnya. */
+  const sudahDipakai = new Set();
+
+  function cariIsian(varian, opsi) {
+    opsi = opsi || {};
+    const hindari = (opsi.hindari || []).map(norm);
+    const semua = [...document.querySelectorAll(SELEKTOR_ISIAN)].filter(terlihat)
+      .filter((el) => opsi.ulang || !sudahDipakai.has(el))
+      .filter((el) => !hindari.length || !namaIsian(el).some((n) => hindari.some((h) => n.includes(h))));
     // Cocok persis dulu (mis. "Kondisi" jangan tertukar dengan "Kondisi kendaraan"), baru awalan.
     const v = varian.map(norm);
     return semua.find((el) => namaIsian(el).some((n) => v.indexOf(n) >= 0)) ||
       semua.find((el) => namaIsian(el).some((n) => cocok(n, varian))) || null;
   }
 
+  const amanRegex = (s) => String(s || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
   function nilaiIsian(el) {
     return el.isContentEditable ? el.innerText.trim() : String(el.value || '');
+  }
+
+  /** Nilai yang terlihat pengguna — termasuk dropdown yang bukan <input>. */
+  function nilaiTampil(el) {
+    if (!el) return '';
+    if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable) return nilaiIsian(el);
+    const nama = namaIsian(el)[0] || '';
+    return norm(el.innerText || '').replace(new RegExp('^' + amanRegex(nama) + '\\s*'), '').trim();
+  }
+
+  /** Cukup sama? Facebook sering menulis ulang (Rp, titik ribuan, "Transmisi otomatis"). */
+  function samaNilai(isi, target, hanyaAngka) {
+    if (hanyaAngka) return angka(isi) === angka(target);
+    const bersih = (s) => norm(s).replace(/[^a-z0-9]/g, '');
+    const a = bersih(isi);
+    const b = bersih(target);
+    if (!b) return true;
+    if (!a) return false;
+    return a === b || a.includes(b) || b.includes(a);
   }
 
   /** Samakan teks sebelum dibandingkan: Facebook merapikan spasi, baris baru, dan spasi tak-putus. */
@@ -253,7 +292,8 @@
     const asli = String(nilai[nilai.length - 1]);
     let el = null;
     try {
-      el = await tunggu(() => cariIsian(label), opsi.tunggu || 5000, 'Kolom ' + namaKolom + ' tidak ditemukan di formulir.');
+      el = await tunggu(() => cariIsian(label, { hindari: opsi.hindari, ulang: opsi.ulang }), opsi.tunggu || 5000,
+        'Kolom ' + namaKolom + ' tidak ditemukan di formulir.');
     } catch (e) {
       if (opsi.wajib) throw e;
       peringatan.push(namaKolom + ' dilewati (kolom tidak ada)');
@@ -271,10 +311,55 @@
       } else {
         await pilihOpsi(el, nilai, namaKolom);
       }
+      sudahDipakai.add(el);
+      catatIsian({ nama: namaKolom, label, nilai, asli, el, angka: !!opsi.angka, hindari: opsi.hindari });
     } catch (e) {
       if (opsi.wajib) throw e;
       tutupDaftar();
       peringatan.push(e.message);
+    }
+  }
+
+  // ---------------------------------------------------------- periksa ulang (anti tertukar)
+
+  /**
+   * Facebook kadang mengosongkan atau menimpa kolom yang sudah diisi — mis. Model
+   * direset setelah Merek berubah. Semua isian direkam agar bisa dicocokkan lagi
+   * sebelum iklan diterbitkan/disimpan sebagai draf.
+   */
+  const rekamIsian = [];
+  function catatIsian(x) {
+    const lama = rekamIsian.findIndex((r) => r.nama === x.nama);
+    if (lama >= 0) rekamIsian[lama] = x; else rekamIsian.push(x);
+  }
+
+  function bacaKolom(r) {
+    const el = r.el && r.el.isConnected && terlihat(r.el) ? r.el : cariIsian(r.label, { ulang: true, hindari: r.hindari });
+    return { el, isi: nilaiTampil(el) };
+  }
+
+  async function periksaIsian() {
+    await langkah('memeriksa ulang isian');
+    const meleset = [];
+    for (const r of rekamIsian) {
+      const { el, isi } = bacaKolom(r);
+      if (samaNilai(isi, r.asli, r.angka)) continue;
+      // Sekali perbaikan: paling sering kolomnya dikosongkan sendiri oleh Facebook.
+      try {
+        sudahDipakai.delete(el);
+        await isiAtauPilih(r.label, r.nilai, r.nama, { angka: r.angka, wajib: true, ulang: true });
+      } catch (e) { /* alasannya ikut dilaporkan di bawah */ }
+      const ulang = bacaKolom(r);
+      if (!samaNilai(ulang.isi, r.asli, r.angka)) {
+        meleset.push(r.nama + ': ' + (ulang.isi ? 'terbaca "' + potongTeks(ulang.isi, 30) + '"' : 'kosong') +
+          ', seharusnya "' + potongTeks(r.asli, 30) + '"');
+      } else {
+        peringatan.push(r.nama + ' sempat berubah sendiri, sudah diisi ulang');
+      }
+    }
+    if (meleset.length) {
+      throw new Error('Isian tidak sesuai setelah formulir selesai — ' + meleset.join(' · ') +
+        '. Iklan tidak diteruskan agar tidak terpasang dengan data yang salah.');
     }
   }
 
@@ -444,6 +529,8 @@
     await langkah('mengisi harga');
     const el = await tunggu(() => cariIsian(PENANDA.harga), 8000, 'Kolom Harga tidak ditemukan.');
     await isiTeks(el, String(t.harga), (nilai, teks) => angka(nilai) === angka(teks), 'Harga');
+    sudahDipakai.add(el);
+    catatIsian({ nama: 'Harga', label: PENANDA.harga, nilai: [String(t.harga)], asli: String(t.harga), el, angka: true });
   }
 
   async function isiDeskripsiLokasi(t) {
@@ -451,6 +538,8 @@
       await langkah('mengisi deskripsi');
       const desk = await tunggu(() => cariIsian(PENANDA.deskripsi), 5000, 'Kolom Deskripsi tidak ditemukan.');
       await isiTeks(desk, t.deskripsi, null, 'Deskripsi');
+      sudahDipakai.add(desk);
+      catatIsian({ nama: 'Deskripsi', label: PENANDA.deskripsi, nilai: [t.deskripsi], asli: t.deskripsi, el: desk });
     }
     if (t.lokasi) {
       await langkah('mengisi lokasi');
@@ -498,7 +587,7 @@
       'Formulir kendaraan tidak ditemukan (kolom "Jenis kendaraan" tidak muncul).');
     if (cariIsian(PENANDA.jenisKendaraan)) {
       await langkah('memilih jenis kendaraan');
-      await isiAtauPilih(PENANDA.jenisKendaraan, opsiDari(PENANDA.jenisKendaraanOpsi, k.jenis || 'Mobil/Truk'), 'Jenis kendaraan', { wajib: true });
+      await isiAtauPilih(PENANDA.jenisKendaraan, opsiDari(PENANDA.jenisKendaraanOpsi, k.jenis || 'Mobil/Truk'), 'Jenis kendaraan', { wajib: true, hindari: HINDARI.jenisKendaraan });
       await jeda(1500); // kolom lain muncul setelah jenis kendaraan dipilih
     }
     await unggahFoto(t);
@@ -507,7 +596,7 @@
     await langkah('mengisi merek');
     await isiAtauPilih(PENANDA.merek, [k.merek], 'Merek', { wajib: true });
     await langkah('mengisi model');
-    await isiAtauPilih(PENANDA.model, [k.model], 'Model', { wajib: true });
+    await isiAtauPilih(PENANDA.model, [k.model], 'Model', { wajib: true, hindari: HINDARI.model });
     if (k.jarakTempuh !== null && k.jarakTempuh !== undefined && k.jarakTempuh !== '') {
       await langkah('mengisi jarak tempuh');
       await isiAtauPilih(PENANDA.jarakTempuh, [String(k.jarakTempuh)], 'Jarak tempuh', { angka: true, wajib: true });
@@ -515,7 +604,7 @@
     await isiHarga(t);
     // Tipe body & Warna eksterior wajib di formulir kendaraan Facebook Indonesia.
     if (k.tipeBodi) { await langkah('memilih tipe body'); await isiAtauPilih(PENANDA.tipeBodi, [k.tipeBodi], 'Tipe body', { wajib: true }); }
-    if (k.warna) { await langkah('memilih warna eksterior'); await isiAtauPilih(PENANDA.warna, [k.warna], 'Warna eksterior', { wajib: true }); }
+    if (k.warna) { await langkah('memilih warna eksterior'); await isiAtauPilih(PENANDA.warna, [k.warna], 'Warna eksterior', { wajib: true, hindari: HINDARI.warna }); }
     if (t.kondisi) { await langkah('memilih kondisi kendaraan'); await isiAtauPilih(PENANDA.kondisiKendaraan, opsiDari(PENANDA.kondisiKendaraanOpsi, t.kondisi), 'Kondisi kendaraan'); }
     if (k.bahanBakar) { await langkah('memilih bahan bakar'); await isiAtauPilih(PENANDA.bahanBakar, opsiDari(PENANDA.bahanBakarOpsi, k.bahanBakar), 'Bahan bakar'); }
     if (k.transmisi) { await langkah('memilih transmisi'); await isiAtauPilih(PENANDA.transmisi, opsiDari(PENANDA.transmisiOpsi, k.transmisi), 'Transmisi'); }
@@ -574,6 +663,9 @@
       }
       if (t.jenis === 'kendaraan') await isiKendaraan(t);
       else await isiBarang(t);
+
+      // Cocokkan lagi semua isian sebelum apa pun disimpan/diterbitkan.
+      await periksaIsian();
 
       // Mode draf: berhenti di sini, iklan disimpan tetapi tidak diterbitkan.
       if (t.draf) {

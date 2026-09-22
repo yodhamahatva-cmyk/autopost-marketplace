@@ -1,0 +1,12 @@
+Kolom,Keterangan,Pilihan yang diterima
+Jenis Kendaraan,wajib,Mobil/Truk | Sepeda Motor
+Tipe Bodi,wajib untuk Mobil/Truk,Hatchback | Sedan | SUV | MPV | Minivan | Coupe | Convertible | Wagon | Pikap | Truk | Van | Lainnya
+Warna Eksterior,wajib,Hitam | Putih | Perak | Abu-abu | Merah | Biru | Kuning | Hijau | Cokelat | Oranye | Krem | Emas | Lainnya
+Kondisi Kendaraan,boleh kosong,Baru | Bekas - Seperti Baru | Bekas - Baik | Bekas - Cukup Baik
+Jenis Bahan Bakar,boleh kosong,Bensin | Diesel | Listrik | Hibrida
+Transmisi,boleh kosong,Otomatis | Manual
+Tahun,wajib,"4 angka, mis. 2019"
+Jarak Tempuh (km),wajib,"angka saja, mis. 15770 (titik/koma boleh, akan dibersihkan)"
+Harga,wajib,"angka saja, mis. 156400000 (boleh ""Rp 156.400.000"")"
+Folder Foto (di PC),isi salah satu: folder ATAU URL Foto,mis. D:\Foto Mobil\B1590DYA
+URL Foto,isi salah satu: folder ATAU URL Foto,"alamat gambar publik, pisahkan dengan koma"

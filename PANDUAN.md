@@ -53,6 +53,35 @@ Tiga bagian yang bekerja bersama:
 
 ## D. Impor stok dari Google Sheet
 
+### Templat sheet (paling aman dari salah kolom)
+
+Di dasbor → **Impor** ada dua tombol unduh:
+
+- **Templat stok (CSV)** — urutan kolomnya persis formulir kendaraan Facebook.
+- **Daftar pilihan nilai** — isi sah untuk Jenis Kendaraan, Tipe Bodi, Warna, Kondisi, Bahan Bakar, Transmisi.
+
+Cara pakai: buka Google Sheet baru → **File → Impor → Unggah** → pilih templatnya → *Ganti spreadsheet* → ganti barisnya dengan stok Anda. Jangan mengubah baris header; menambah kolom sendiri di sebelah kanan boleh.
+
+| Kolom | Wajib | Catatan |
+|---|---|---|
+| No Polisi (Kunci Unik) | – | mencegah satu unit terimpor dua kali |
+| Jenis Kendaraan | ya | `Mobil/Truk` atau `Sepeda Motor` |
+| Tahun | ya | 4 angka |
+| Merek | ya | harus ada di daftar Facebook (mis. Daihatsu, Toyota) |
+| Model | ya | mis. `Ayla 1.0 X` |
+| Jarak Tempuh (km) | ya | angka; `15.770` juga diterima |
+| Harga | ya | angka; `Rp 156.400.000` juga diterima |
+| Tipe Bodi | ya untuk mobil | sepeda motor tidak punya kolom ini di Facebook |
+| Warna Eksterior | ya | **bukan** warna interior |
+| Kondisi Kendaraan, Jenis Bahan Bakar, Transmisi | – | ikuti daftar pilihan |
+| Lokasi | – | kosong = memakai lokasi bawaan akun Facebook |
+| Deskripsi | ya | boleh banyak baris & emoji |
+| Folder Foto (di PC) / URL Foto | salah satu | lihat bagian E |
+
+Judul iklan dibuat otomatis dari **Tahun + Merek + Model**, jadi tidak perlu kolom judul.
+
+### Bila memakai sheet sendiri
+
 1. Agar bisa dibaca tanpa login: di Google Sheet pilih **Bagikan → Siapa saja yang memiliki link (Pelihat)**, atau **File → Bagikan → Publikasikan ke web → CSV**.
 2. Dasbor → **Impor** → tempel link → **Tarik dari Sheet**. Bisa juga **Unggah CSV/XLSX**.
 3. Periksa **pemetaan kolom**. Sudah ditebak dari nama header (Merk → Merek, KM → Jarak Tempuh, No Polisi → Kunci Unik).
@@ -111,6 +140,8 @@ Catatan: menyimpan draf tetap membuka formulir baru di Facebook, jadi **jeda ant
 | “Merek/Warna … tidak ada di pilihan Facebook” | Pesan galat menyebutkan pilihan yang tersedia; samakan isinya di dasbor. |
 | "Skrip pengisi tidak merespons" | Ekstensi berhasil membuka tab tetapi skrip pengisinya tidak menjawab. Pesannya menyebutkan halaman apa yang terbuka. Bila bukan halaman buat iklan, buka `facebook.com/marketplace/create/vehicle` sekali secara manual di Chrome yang sama (Marketplace kadang minta verifikasi/pengaturan lokasi dulu), lalu jadwalkan ulang. Periksa juga `chrome://extensions` — ekstensi harus aktif, tanpa galat, versi 2.1.0 ke atas. |
 | "Isian tidak mau terisi" | Terjadi bila teks yang masuk jauh berbeda dari yang dikirim. Pesannya menyebutkan berapa karakter yang masuk. Perbedaan kecil (spasi, baris baru, emoji yang disaring, atau teks dipotong Facebook) tidak lagi dianggap gagal — hanya dicatat sebagai catatan pada hasil. |
+| Isian iklan **tertukar** (mis. Model berisi tipe bodi) | Dua sebab. **(1) Pemetaan kolom**: header yang mirip seperti "Varian", "Jenis Bahan Bakar", atau "Warna Interior" dulu bisa tertukar — sekarang tidak, dan cara paling aman adalah memakai **templat sheet** di halaman Impor. Periksa juga tabel pemetaan sebelum menekan Impor. **(2) Formulir Facebook** kadang mengosongkan kolom yang sudah diisi. Ekstensi kini mencocokkan ulang seluruh isian sebelum iklan diterbitkan/disimpan: yang berubah diisi ulang, dan bila masih meleset iklan **tidak jadi dipasang** serta kolomnya disebut pada status Gagal. |
+| "Isian tidak sesuai setelah formulir selesai" | Itu penjaga di atas bekerja — iklan sengaja tidak dipasang. Pesannya menyebut kolom, isi yang terbaca, dan isi yang seharusnya. Perbaiki datanya di dasbor (atau pilihan yang tak ada di Facebook), lalu jadwalkan ulang. |
 | "Tombol Berikutnya/Terbitkan tidak aktif" | Facebook tidak pernah menyebut kolom mana yang kurang, jadi pesannya kini melampirkan keadaan formulir: **foto terpasang: n**, kolom yang masih kosong, dan isi tiap kolom. Bila tertulis *foto terpasang: 0*, masalahnya di foto (lihat baris berikutnya). Bila ada kolom kosong yang disebut, isi kolom itu di dasbor. |
 | "Foto ke-n … bukan berkas gambar" | Sumber fotonya tidak mengeluarkan gambar — paling sering link Google Drive yang belum dibagikan "Siapa saja yang memiliki link", atau link halaman (bukan berkas). Perbaiki pembagiannya, atau unggah fotonya lewat dasbor. |
 | "Facebook tidak menawarkan Simpan draf" | Terjadi bila tampilan Facebook tidak menyediakan pilihan draf pada akun itu. Isian **tidak dibuang** — periksa jendela Facebook yang terbuka, simpan/terbitkan manual, lalu pilih **Terbitkan langsung** atau **Mode uji** di Pengaturan. Pesannya menyebutkan pilihan apa saja yang muncul agar bisa ditambahkan ke ekstensi. |
@@ -124,7 +155,7 @@ Catatan: menyimpan draf tetap membuka formulir baru di Facebook, jadi **jeda ant
 
 ## Untuk pengembang
 
-- `npm run uji` menjalankan pemeriksaan inti + kontrak Supabase + berkas ekstensi (57 + 33 + 28) (CSV/XLSX, impor, aturan iklan, protokol ekstensi) tanpa server dan tanpa akun apa pun; data uji ditulis ke folder sementara.
+- `npm run uji` menjalankan pemeriksaan inti + kontrak Supabase + berkas ekstensi (64 + 33 + 31) (CSV/XLSX, impor, aturan iklan, protokol ekstensi) tanpa server dan tanpa akun apa pun; data uji ditulis ke folder sementara.
 - `node test/uji-api.js` menguji HTTP terhadap server yang sedang berjalan (`npm run dev`), termasuk alur ekstensi ujung-ke-ujung.
 - `node test/uji-supabase.js` menguji adaptor Supabase memakai tiruan yang **membaca skema.sql** dan menolak kolom/tipe yang tidak cocok — menangkap ketidakcocokan kolom tanpa perlu akun Supabase.
 - Lapisan data bisa ditukar lewat `SUMBER_DATA`: `supabase` atau `berkas` (folder `./data`). Antarmukanya sama, jadi aplikasi ini bisa dijalankan tanpa Supabase bila perlu.
