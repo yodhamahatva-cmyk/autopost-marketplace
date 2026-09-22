@@ -73,10 +73,10 @@ export default async function Pengaturan({ searchParams }) {
               </div>
               <div>
                 <label htmlFor="batasHarian">Maksimal posting per hari</label>
-                <input type="number" id="batasHarian" name="batasHarian" min="1" max="50" defaultValue={setelan.batasHarian} />
+                <input type="number" id="batasHarian" name="batasHarian" min="1" max="200" defaultValue={setelan.batasHarian} />
               </div>
             </div>
-            <div className="bantuan">Posting beruntun mudah ditandai spam oleh Facebook. Bawaan aman: 10 menit, 10 per hari.</div>
+            <div className="bantuan">Posting beruntun mudah ditandai spam oleh Facebook. Bawaan: jeda 10 menit, 30 iklan per hari (maksimal 200) — naikkan perlahan sambil memantau akun.</div>
           </div>
 
           <div className="kartu">

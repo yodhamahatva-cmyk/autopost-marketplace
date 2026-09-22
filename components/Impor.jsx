@@ -4,16 +4,17 @@ import { susunImpor, TARGET } from '../lib/impor.js';
 import { simpanImpor } from '../lib/aksi.js';
 import { rupiah } from '../lib/util.js';
 
-const besok = () => {
-  const d = new Date(Date.now() + 86400000);
-  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 11) + '09:00';
-};
+/** Waktu sekarang menurut zona dasbor, siap dipakai input datetime-local. */
+const sekarang = (zona) => new Intl.DateTimeFormat('sv-SE', {
+  timeZone: zona || 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit',
+  hour: '2-digit', minute: '2-digit', hour12: false
+}).format(new Date()).replace(' ', 'T').slice(0, 16);
 
 export default function Impor({ sheetUrl, zona }) {
   const [url, setUrl] = useState(sheetUrl || '');
   const [sumber, setSumber] = useState(null);       // hasil /api/impor
   const [peta, setPeta] = useState({});
-  const [opsi, setOpsi] = useState({ barisAwal: 2, mulai: besok(), jedaMenit: 60, cara: 'otomatis', status: 'draf', lewatiDuplikat: true });
+  const [opsi, setOpsi] = useState({ barisAwal: 2, mulai: sekarang(zona), jedaMenit: 15, cara: 'otomatis', status: 'draf', lewatiDuplikat: true });
   const [pesan, setPesan] = useState(null);
   const [sibuk, setSibuk] = useState('');
 

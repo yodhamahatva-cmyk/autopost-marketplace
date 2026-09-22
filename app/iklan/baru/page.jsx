@@ -9,7 +9,8 @@ export default async function IklanBaru({ searchParams }) {
   await wajibMasuk();
   const sp = await searchParams;
   const setelan = await setelanLengkap();
-  const kosong = rapikanIklan({ jenis: 'kendaraan', jadwal: new Date(Date.now() + 86400000).toISOString() });
+  // Jadwal bawaan = sekarang, supaya iklan langsung masuk antrean begitu distatuskan Terjadwal.
+  const kosong = rapikanIklan({ jenis: 'kendaraan', jadwal: new Date().toISOString() });
   return (
     <>
       <h1>Iklan baru</h1>

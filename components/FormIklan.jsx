@@ -203,7 +203,8 @@ export default function FormIklan({ iklan, zona }) {
             <div className="grid k2" style={{ gap: '0 12px' }}>
               <div>
                 <label htmlFor="jadwal">Tanggal & jam tayang</label>
-                <input type="datetime-local" id="jadwal" name="jadwal" defaultValue={untukInputLokal(iklan.jadwal, zona)} />
+                <input type="datetime-local" id="jadwal" name="jadwal"
+                  defaultValue={untukInputLokal(iklan.jadwal || new Date().toISOString(), zona)} />
               </div>
               <div>
                 <label htmlFor="cara">Cara posting</label>
