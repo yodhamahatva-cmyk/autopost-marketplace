@@ -14,6 +14,7 @@ const latar = baca('latar.js');
 const pengisi = baca('isi-formulir.js');
 const folder = baca('baca-folder.js');
 const popup = baca('popup.js');
+const popupHtml = baca('popup.html');
 
 let lulus = 0;
 let gagal = 0;
@@ -56,6 +57,8 @@ cek(/function tandaGambar/.test(pengisi) && /bukan berkas gambar/.test(pengisi),
 cek(/const HINDARI = \{/.test(pengisi) && /interior/.test(pengisi), 'penanda punya daftar kata terlarang (Warna eksterior ≠ Warna Interior)');
 cek(/sudahDipakai\.add\(/.test(pengisi) && /!sudahDipakai\.has\(el\)/.test(pengisi), 'kolom yang sudah diisi tidak dipakai ulang oleh isian berikutnya');
 cek(/async function periksaIsian/.test(pengisi) && /await periksaIsian\(\)/.test(pengisi), 'semua isian dicocokkan ulang sebelum iklan diterbitkan/disimpan');
+cek(/perangkat: s.perangkat/.test(latar) && /perangkat: ''/.test(latar), 'nama akun ikut dikirim pada setiap permintaan ke dasbor');
+cek(/id="perangkat"/.test(popupHtml) && /perangkat/.test(popup), 'popup punya isian nama akun Facebook untuk Chrome ini');
 cek(/async function simpanDraf/.test(pengisi) && /t\.draf/.test(pengisi), 'mode draf: formulir disimpan sebagai draf, bukan diterbitkan');
 cek(/jangan pernah diklik/.test(pengisi) && !/klikAsli\(cariTombol\(PENANDA\.buang/.test(pengisi), 'tombol Buang hanya didaftarkan sebagai larangan, tidak pernah diklik');
 cek(/hasil: 'draf'/.test(pengisi) && /draf: '📝/.test(latar), 'hasil draf dikirim ke pekerja latar & dasbor');

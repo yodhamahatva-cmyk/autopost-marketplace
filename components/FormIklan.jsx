@@ -12,7 +12,8 @@ const untukInputLokal = (iso, zona) => {
   return p.replace(' ', 'T').slice(0, 16);
 };
 
-export default function FormIklan({ iklan, zona }) {
+export default function FormIklan({ iklan, zona, akun = [] }) {
+  const sudahTayang = Object.keys(iklan.terbitAkun || {});
   const [jenis, setJenis] = useState(iklan.jenis);
   const [fotoTipe, setFotoTipe] = useState(iklan.foto?.tipe || 'unggahan');
   const [berkas, setBerkas] = useState(iklan.foto?.berkas || []);
@@ -214,12 +215,36 @@ export default function FormIklan({ iklan, zona }) {
                 </select>
               </div>
             </div>
-            <label htmlFor="status">Status</label>
-            <select id="status" name="status" defaultValue={iklan.status}>
-              <option value="draf">Draf</option>
-              <option value="terjadwal">Terjadwal</option>
-            </select>
-            <div className="bantuan">Zona waktu: {zona}.</div>
+            <div className="grid k2" style={{ gap: '0 12px' }}>
+              <div>
+                <label htmlFor="status">Status</label>
+                <select id="status" name="status" defaultValue={iklan.status}>
+                  <option value="draf">Draf</option>
+                  <option value="terjadwal">Terjadwal</option>
+                </select>
+              </div>
+              <div>
+                <label htmlFor="akun">Akun Facebook tujuan</label>
+                <select id="akun" name="akun" defaultValue={iklan.akun || ''}>
+                  <option value="">Akun mana saja</option>
+                  <option value="*">Semua akun (satu per satu)</option>
+                  {akun.map((a) => <option key={a.nama} value={a.nama}>{a.nama}{a.aktif ? ' · aktif' : ''}</option>)}
+                  {iklan.akun && iklan.akun !== '*' && !akun.some((a) => a.nama === iklan.akun) &&
+                    <option value={iklan.akun}>{iklan.akun} (belum pernah terhubung)</option>}
+                </select>
+              </div>
+            </div>
+            <div className="bantuan">
+              Zona waktu: {zona}.{' '}
+              {akun.length
+                ? 'Nama akun muncul sendiri setelah tiap Chrome mengisi "Nama akun" di popup ekstensi.'
+                : 'Belum ada Chrome yang menyebutkan nama akun — isi kolom "Nama akun Facebook di Chrome ini" pada popup ekstensi.'}
+            </div>
+            {sudahTayang.length > 0 && (
+              <div className="bantuan" style={{ marginTop: 6 }}>
+                Sudah tayang di: <b>{sudahTayang.join(', ')}</b>.
+              </div>
+            )}
           </div>
         </div>
       </div>

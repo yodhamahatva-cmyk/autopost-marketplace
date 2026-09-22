@@ -189,6 +189,58 @@ cek(lDraf.status === STATUS.DRAF_FB && /draf di Facebook Marketplace/i.test(stDr
   'lapor draf → status Draf di Facebook + tautan ke daftar draf', [stDraf.status, stDraf.keterangan]);
 cek(hitunganHariIni(await setelanLengkap()) === 1, 'draf ikut dihitung pada jeda & batas harian');
 
+// ---- Banyak akun: tiap Chrome menyebut namanya, kuota & antrean per akun
+bagian('Banyak akun Facebook');
+const { daftarPerangkat, cocokAkun, labelAkun } = await import('../lib/perangkat.js');
+await db().simpanSetelan({ akhir: 'terbit', modeUji: false, postTerakhir: '', hitungHarian: '', perangkat: {}, batasHarian: 10, jedaMenit: 10 });
+const kirimA = (o) => prosesEkstensi({ kunci: 'kunci-uji-123456789', perangkat: 'Showroom A', versiEkstensi: '2.4.0', ...o });
+const kirimB = (o) => prosesEkstensi({ kunci: 'kunci-uji-123456789', perangkat: 'Showroom B', ...o });
+await kirimA({ aksi: 'ping' });
+await kirimB({ aksi: 'ping' });
+const perangkatTerdaftar = daftarPerangkat(await setelanLengkap());
+cek(perangkatTerdaftar.length === 2 && perangkatTerdaftar[0].nama === 'Showroom A' && perangkatTerdaftar[0].aktif && perangkatTerdaftar[0].versi === '2.4.0',
+  'tiap Chrome tercatat sendiri lengkap dengan kontak terakhir & versi', perangkatTerdaftar.map((p) => p.nama));
+
+const [khususB, bebas] = await db().simpanBanyak([
+  { ...mobil, id: undefined, kunci: 'AKUN-B', akun: 'Showroom B', status: STATUS.TERJADWAL, jadwal: dulu, token: null, terbitAkun: {} },
+  { ...mobil, id: undefined, kunci: 'AKUN-BEBAS', akun: '', status: STATUS.TERJADWAL, jadwal: dulu, token: null, terbitAkun: {} }
+]);
+cek(cocokAkun(khususB, 'Showroom B') && !cocokAkun(khususB, 'Showroom A') && cocokAkun(bebas, 'Showroom A'),
+  'iklan berakun khusus hanya boleh diambil Chrome yang namanya cocok');
+const ambilA = await kirimA({ aksi: 'ambil' });
+cek(ambilA.tugas && ambilA.tugas.id === bebas.id, 'Chrome A melewati iklan milik akun B dan mengambil yang bebas', ambilA.tugas && ambilA.tugas.judul);
+const ambilB = await kirimB({ aksi: 'ambil' });
+cek(ambilB.tugas && ambilB.tugas.id === khususB.id, 'Chrome B mengambil iklan yang ditujukan kepadanya — jeda akun A tidak menahannya', ambilB.tunggu);
+await kirimA({ aksi: 'lapor', id: bebas.id, token: ambilA.tugas.token, hasil: 'terbit', url: 'https://facebook.com/marketplace/item/9' });
+await kirimB({ aksi: 'lapor', id: khususB.id, token: ambilB.tugas.token, hasil: 'terbit', url: 'https://facebook.com/marketplace/item/8' });
+const setelahDua = await setelanLengkap();
+cek(hitunganHariIni(setelahDua, 'Showroom A') === 1 && hitunganHariIni(setelahDua, 'Showroom B') === 1,
+  'hitungan harian dihitung per akun (masing-masing 1)', [hitunganHariIni(setelahDua, 'Showroom A'), hitunganHariIni(setelahDua, 'Showroom B')]);
+cek(/akun "Showroom B"/.test((await db().ambilIklan(khususB.id)).keterangan), 'keterangan menyebut akun yang memasang');
+
+// ---- Satu iklan untuk SEMUA akun: dipasang bergiliran, selesai setelah semua kebagian
+const [serentak] = await db().simpanBanyak([
+  { ...mobil, id: undefined, kunci: 'AKUN-SEMUA', akun: '*', status: STATUS.TERJADWAL, jadwal: dulu, token: null, terbitAkun: {} }
+]);
+cek(labelAkun(serentak) === 'Semua akun' && labelAkun(bebas) === 'Akun mana saja', 'label akun terbaca manusia');
+await db().simpanSetelan({ perangkat: { 'Showroom A': { terakhir: new Date().toISOString() }, 'Showroom B': { terakhir: new Date().toISOString() } } });
+const s1 = await kirimA({ aksi: 'ambil' });
+cek(s1.tugas && s1.tugas.id === serentak.id, 'iklan "semua akun" diambil akun pertama', s1.tunggu);
+const l1 = await kirimA({ aksi: 'lapor', id: serentak.id, token: s1.tugas.token, hasil: 'terbit', url: 'https://facebook.com/marketplace/item/1' });
+const setelahA = await db().ambilIklan(serentak.id);
+cek(l1.status === STATUS.TERJADWAL && l1.sisaAkun.join() === 'Showroom B' && setelahA.terbitAkun['Showroom A'] &&
+  /Menunggu akun berikutnya: Showroom B/.test(setelahA.keterangan),
+  'setelah akun A: kembali mengantre untuk akun B', [setelahA.status, setelahA.keterangan]);
+cek(!cocokAkun(setelahA, 'Showroom A') && cocokAkun(setelahA, 'Showroom B'), 'akun A tidak akan memasangnya dua kali');
+await db().simpanIklan({ ...setelahA, jadwal: dulu });
+await db().simpanSetelan({ perangkat: { ...(await setelanLengkap()).perangkat, 'Showroom B': { terakhir: new Date().toISOString() } } });
+const s2 = await kirimB({ aksi: 'ambil' });
+cek(s2.tugas && s2.tugas.id === serentak.id, 'akun B kebagian iklan yang sama', s2.tunggu);
+const l2 = await kirimB({ aksi: 'lapor', id: serentak.id, token: s2.tugas.token, hasil: 'terbit', url: 'https://facebook.com/marketplace/item/2' });
+const setelahB = await db().ambilIklan(serentak.id);
+cek(l2.status === STATUS.TERBIT && Object.keys(setelahB.terbitAkun).join() === 'Showroom A,Showroom B',
+  'setelah semua akun kebagian → status Terbit dengan daftar akunnya', [setelahB.status, Object.keys(setelahB.terbitAkun)]);
+
 // ---- Templat Google Sheet resmi: harus terpetakan 100% tanpa diutak-atik
 bagian('Templat sheet kendaraan');
 const { KOLOM_TEMPLAT, isiPilihan, BERKAS_PILIHAN, BERKAS_STOK } = await import('../templat/buat-templat.js');

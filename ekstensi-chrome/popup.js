@@ -24,9 +24,10 @@ function waktu(ms) {
 }
 
 async function muat() {
-  const s = await chrome.storage.local.get({ url: '', kunci: '', aktif: true, tampilkan: true, status: {}, diagnosa: null });
+  const s = await chrome.storage.local.get({ url: '', kunci: '', perangkat: '', aktif: true, tampilkan: true, status: {}, diagnosa: null });
   $('url').value = s.url;
   $('kunci').value = s.kunci;
+  $('perangkat').value = s.perangkat;
   $('aktif').checked = s.aktif;
   $('tampilkan').checked = s.tampilkan;
   tampilStatus(s.status, s.diagnosa);
@@ -54,6 +55,7 @@ function tampilStatus(st, diag) {
 $('simpan').addEventListener('click', async () => {
   const url = $('url').value.trim();
   const kunci = $('kunci').value.trim();
+  const perangkat = $('perangkat').value.trim().slice(0, 40);
   if (!/^https?:\/\/[^\s]+\/api\/ekstensi$/.test(url)) {
     return pesan('galat', 'URL harus berakhiran /api/ekstensi — salin dari halaman Pengaturan di dasbor.');
   }
@@ -67,7 +69,7 @@ $('simpan').addEventListener('click', async () => {
   } catch (e) {
     return pesan('galat', 'URL tidak valid: ' + e.message);
   }
-  await chrome.storage.local.set({ url, kunci, aktif: $('aktif').checked, tampilkan: $('tampilkan').checked });
+  await chrome.storage.local.set({ url, kunci, perangkat, aktif: $('aktif').checked, tampilkan: $('tampilkan').checked });
   $('simpan').disabled = true;
   pesan('info', 'Menghubungi dasbor…');
   try {
@@ -75,7 +77,9 @@ $('simpan').addEventListener('click', async () => {
     const st = (await chrome.storage.local.get({ status: {} })).status;
     st.versiDasbor = r.versi || '?';
     await chrome.storage.local.set({ status: st });
-    pesan('ok', 'Terhubung ke "' + r.nama + '".\n' + ({
+    pesan('ok', 'Terhubung ke "' + r.nama + '".' +
+      (r.perangkat ? '\n👤 Chrome ini terdaftar sebagai akun "' + r.perangkat + '".' : '\n👤 Tanpa nama akun — hanya menerima iklan yang tidak ditujukan ke akun tertentu.') +
+      '\n' + ({
       uji: '🧪 Mode uji AKTIF — formulir diisi tetapi tidak diterbitkan.',
       draf: '📝 Iklan disimpan sebagai DRAF di Facebook — Anda yang menerbitkannya sendiri.',
       terbit: '🚀 Iklan akan langsung diterbitkan.'

@@ -29,6 +29,8 @@ create table if not exists ap_iklan (
   klaim       timestamptz,
   hasil_url   text default '',
   sumber      jsonb,
+  akun        text default '',                     -- nama akun/perangkat tujuan: kosong = mana saja, * = semua akun
+  terbit_akun jsonb not null default '{}'::jsonb,       -- {"Akun A": {waktu, url, hasil}} untuk iklan bertujuan semua akun
   dibuat      timestamptz not null default now(),
   diubah      timestamptz not null default now()
 );
@@ -57,6 +59,13 @@ alter table ap_iklan   enable row level security;
 alter table ap_log     enable row level security;
 alter table ap_setelan enable row level security;
 -- Sengaja tanpa policy: hanya service role (server) yang bisa mengakses.
+
+-- ---------------------------------------------------------------------------
+-- Pemutakhiran untuk basis data yang dibuat sebelum dukungan banyak akun.
+-- Aman dijalankan ulang kapan saja.
+-- ---------------------------------------------------------------------------
+alter table ap_iklan add column if not exists akun        text default '';
+alter table ap_iklan add column if not exists terbit_akun jsonb not null default '{}'::jsonb;
 
 -- Penyimpanan foto unggahan. Bucket privat: foto dibaca server, lalu dikirim
 -- ke ekstensi. Tidak ada URL publik yang bocor.

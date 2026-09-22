@@ -5,6 +5,7 @@ import { simpanSetelanForm, buatKunciEkstensi } from '../../lib/aksi.js';
 import { hitunganHariIni } from '../../lib/ekstensi.js';
 import { relatif } from '../../lib/waktu.js';
 import { caraAkhir } from '../../lib/iklan.js';
+import { daftarPerangkat } from '../../lib/perangkat.js';
 import Salin from '../../components/Salin.jsx';
 
 export const dynamic = 'force-dynamic';
@@ -16,6 +17,7 @@ export default async function Pengaturan({ searchParams }) {
   const h = await headers();
   const asal = (h.get('x-forwarded-proto') || 'https') + '://' + (h.get('x-forwarded-host') || h.get('host') || 'localhost:3110');
   const akhir = caraAkhir(setelan);
+  const perangkat = daftarPerangkat(setelan);
   const urlApi = asal + '/api/ekstensi';
 
   return (
@@ -48,6 +50,35 @@ export default async function Pengaturan({ searchParams }) {
           Pasang folder <code>ekstensi-chrome</code> lewat <code>chrome://extensions</code> → Mode pengembang → Muat yang belum dibuka,
           lalu klik ikon ekstensi dan tempel URL + kunci di atas. Untuk foto dari folder komputer, nyalakan
           “Izinkan akses ke URL file” pada halaman detail ekstensi.
+        </div>
+      </div>
+
+      <div className="kartu">
+        <h3>Akun Facebook / Chrome yang terhubung</h3>
+        {perangkat.length ? (
+          <table>
+            <thead><tr><th>Akun</th><th>Kontak terakhir</th><th>Hari ini</th><th>Versi</th></tr></thead>
+            <tbody>
+              {perangkat.map((p) => (
+                <tr key={p.nama}>
+                  <td><b>{p.nama}</b></td>
+                  <td className="kecil">{p.aktif ? '✅ aktif' : '💤 tidak aktif'}{p.terakhir ? ' · ' + relatif(p.terakhir) : ''}</td>
+                  <td className="kecil">{hitunganHariIni(setelan, p.nama)} / {setelan.batasHarian}</td>
+                  <td className="kecil">{p.versi || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <div className="bantuan">
+            Belum ada. Pada tiap Chrome, buka popup ekstensi lalu isi <b>Nama akun Facebook di Chrome ini</b> (mis. “Showroom A”)
+            dan tekan <b>Simpan &amp; tes</b> — namanya langsung muncul di sini.
+          </div>
+        )}
+        <div className="bantuan" style={{ marginTop: 10 }}>
+          Jeda antar posting dan batas harian di bawah berlaku <b>per akun</b>, bukan digabung. Satu iklan bisa diarahkan ke
+          akun tertentu, ke <i>akun mana saja</i>, atau ke <i>semua akun</i> (dipasang bergiliran di setiap akun) lewat
+          pilihan <b>Akun Facebook tujuan</b> pada formulir iklan.
         </div>
       </div>
 

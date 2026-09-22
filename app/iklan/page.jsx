@@ -1,6 +1,7 @@
 import { wajibMasuk } from '../../lib/auth.js';
 import { db, setelanLengkap } from '../../lib/data/index.js';
 import { LABEL_STATUS, periksaIklan, ringkas } from '../../lib/iklan.js';
+import { labelAkun } from '../../lib/perangkat.js';
 import { formatWaktu } from '../../lib/waktu.js';
 import { rupiah } from '../../lib/util.js';
 import BarisAksi from '../../components/BarisAksi.jsx';
@@ -53,7 +54,7 @@ export default async function DaftarIklan({ searchParams }) {
                       {x.keterangan && <div className="kecil">{x.keterangan}</div>}
                     </td>
                     <td style={{ whiteSpace: 'nowrap' }}>{rupiah(x.harga)}</td>
-                    <td style={{ whiteSpace: 'nowrap' }} className="kecil">{x.jadwal ? formatWaktu(x.jadwal, setelan.zona) : '—'}<div>{x.cara === 'manual' ? 'pasang manual' : 'otomatis'}</div></td>
+                    <td style={{ whiteSpace: 'nowrap' }} className="kecil">{x.jadwal ? formatWaktu(x.jadwal, setelan.zona) : '—'}<div>{x.cara === 'manual' ? 'pasang manual' : 'otomatis'}</div>{x.akun && <div>👤 {labelAkun(x)}</div>}</td>
                     <td><span className={'lencana l-' + x.status}>{LABEL_STATUS[x.status]}</span>
                       {x.hasilUrl && <div className="kecil"><a href={x.hasilUrl} target="_blank" rel="noopener">{x.status === 'draf-fb' ? 'buka draf di FB' : 'lihat di FB'}</a></div>}</td>
                     <td><BarisAksi id={x.id} status={x.status} siap={cek.siap} /></td>

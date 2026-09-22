@@ -60,6 +60,15 @@ const barang = rapikanIklan({ judul: 'Kursi Rotan', harga: 350000, kategori: 'Pe
 // simpan dari formulir (iklan baru → upsert)
 const tersimpan = await s.simpanIklan(mobil);
 cek(tersimpan.id && tersimpan.judul === '2025 Daihatsu Ayla 1.0 X' && tersimpan.kendaraan.merek === 'Daihatsu', 'simpan iklan baru (formulir)', tersimpan.judul);
+// Kolom banyak akun harus ada di tabel (skema.sql) dan bolak-balik tanpa berubah.
+const akunIklan = await s.simpanIklan(rapikanIklan({
+  ...mobil, id: undefined, kunci: 'AKUN-1', status: STATUS.DRAF, akun: 'Showroom B',
+  terbitAkun: { 'Showroom A': { waktu: '2026-09-22T10:00:00.000Z', url: 'https://facebook.com/marketplace/item/1', hasil: 'terbit' } }
+}));
+const akunKembali = await s.ambilIklan(akunIklan.id);
+cek(akunKembali.akun === 'Showroom B' && akunKembali.terbitAkun['Showroom A'].hasil === 'terbit',
+  'kolom akun & terbit_akun tersimpan (kontrak skema banyak akun)', [akunKembali.akun, Object.keys(akunKembali.terbitAkun)]);
+
 const [b2] = await s.simpanBanyak([barang]);
 cek(b2.id && b2.foto.url[0] === 'https://contoh.com/a.jpg', 'simpan banyak (impor)');
 cek((await s.ambilIklan(tersimpan.id)).harga === 156400000, 'ambil iklan');

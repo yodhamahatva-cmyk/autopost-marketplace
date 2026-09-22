@@ -28,7 +28,7 @@ chrome.alarms.onAlarm.addListener((a) => { if (a.name === 'cek') putaran(false).
 // ------------------------------------------------------------ penyimpanan
 
 async function setelan() {
-  return chrome.storage.local.get({ url: '', kunci: '', aktif: true, tampilkan: true });
+  return chrome.storage.local.get({ url: '', kunci: '', perangkat: '', aktif: true, tampilkan: true });
 }
 async function ambilTugas() {
   return (await chrome.storage.session.get('tugas')).tugas || null;
@@ -53,7 +53,7 @@ async function panggil(aksi, data) {
     res = await fetch(s.url, {
       method: 'POST', redirect: 'follow', signal: henti.signal,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(Object.assign({ aksi, kunci: s.kunci, versiEkstensi: VERSI }, data || {}))
+      body: JSON.stringify(Object.assign({ aksi, kunci: s.kunci, versiEkstensi: VERSI, perangkat: s.perangkat || '' }, data || {}))
     });
   } catch (e) {
     throw new Error(e.name === 'AbortError'

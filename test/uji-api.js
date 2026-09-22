@@ -94,6 +94,32 @@ const stDraf = JSON.parse(fs.readFileSync(path.join(DATA, 'iklan.json'), 'utf8')
 cek(draf.status === 'draf-fb' && stDraf.status === 'draf-fb' && /Draf/.test(stDraf.keterangan), 'lapor draf → status Draf di Facebook', stDraf.status);
 cek((await kirim({ aksi: 'rekam', diagnosa: { url: 'https://www.facebook.com/marketplace/create/vehicle' } })).ok, 'rekam formulir diterima');
 
+bagian('Banyak akun lewat API');
+const kirimAkun = (nama, o) => fetch(DASAR + '/api/ekstensi', {
+  method: 'POST', headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ kunci: KUNCI, perangkat: nama, versiEkstensi: '2.4.0', ...o })
+}).then((r) => r.json());
+fs.writeFileSync(path.join(DATA, 'setelan.json'), JSON.stringify({
+  kunciEkstensi: KUNCI, akhir: 'terbit', modeUji: false, jedaMenit: 10, batasHarian: 10, zona: 'Asia/Jakarta',
+  perangkat: { 'Akun 1': { terakhir: new Date().toISOString() }, 'Akun 2': { terakhir: new Date().toISOString() } }
+}, null, 2));
+const sebelumAkun = JSON.parse(fs.readFileSync(path.join(DATA, 'iklan.json'), 'utf8'));
+fs.writeFileSync(path.join(DATA, 'iklan.json'), JSON.stringify([
+  ...sebelumAkun,
+  { ...IKLAN, id: '11111111-1111-4111-8111-111111111111', kunci: 'SEMUA', akun: '*', terbitAkun: {}, status: 'terjadwal', jadwal: iso(-5), token: null, klaim: null, hasilUrl: '' }
+], null, 2));
+const p1 = await kirimAkun('Akun 1', { aksi: 'ping' });
+cek(p1.perangkat === 'Akun 1', 'ping menyebut nama akun yang terdaftar', p1.perangkat);
+const t1 = await kirimAkun('Akun 1', { aksi: 'ambil' });
+cek(t1.tugas?.id === '11111111-1111-4111-8111-111111111111', 'akun 1 mengambil iklan "semua akun"', t1.tunggu);
+const r1 = await kirimAkun('Akun 1', { aksi: 'lapor', id: t1.tugas.id, token: t1.tugas.token, hasil: 'terbit', url: 'https://www.facebook.com/marketplace/item/1' });
+cek(r1.status === 'terjadwal' && r1.sisaAkun?.join() === 'Akun 2', 'setelah akun 1 → antre lagi untuk akun 2', r1);
+const simpanan = JSON.parse(fs.readFileSync(path.join(DATA, 'iklan.json'), 'utf8')).find((x) => x.kunci === 'SEMUA');
+cek(simpanan.terbitAkun['Akun 1']?.hasil === 'terbit' && /Menunggu akun berikutnya: Akun 2/.test(simpanan.keterangan),
+  'riwayat per akun tersimpan di berkas data', simpanan.keterangan);
+const t1b = await kirimAkun('Akun 1', { aksi: 'ambil' });
+cek(!t1b.tugas, 'akun 1 tidak mengambilnya untuk kedua kali', t1b.tunggu);
+
 bagian('Impor CSV lewat API');
 const csv = 'No Polisi,Merk,Model,Varian,Tahun,Transmisi,KM,Harga,Warna,Deskripsi\n' +
   'B7788ABC,Honda,Brio,1.2 RS CVT,2022,OTOMATIS,32000,"Rp 168.000.000",Merah,Unit terawat\n';

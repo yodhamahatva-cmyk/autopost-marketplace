@@ -122,6 +122,29 @@ Batas: 10 foto untuk barang, 20 foto untuk kendaraan (mengikuti Facebook).
 3. Dasbor menampilkan langkah yang sedang dikerjakan ekstensi, lalu status akhirnya: **Terbit** (dengan tautan) atau **Gagal** (dengan alasannya).
 4. Iklan bercara **Pasang manual** tidak disentuh ekstensi; iklan tersebut muncul di dasbor sebagai daftar “Perlu dipasang manual”.
 
+### Beberapa akun Facebook (banyak Chrome)
+
+Satu dasbor bisa melayani beberapa akun Facebook sekaligus — satu akun = satu Chrome yang dipasangi ekstensi.
+
+1. Di tiap Chrome: pasang ekstensi, tempel **URL + kunci yang sama**, lalu isi **Nama akun Facebook di Chrome ini** (mis. `Showroom A`) → **Simpan & tes**.
+2. Namanya langsung muncul di **Pengaturan → Akun Facebook / Chrome yang terhubung**, lengkap dengan status aktif dan pemakaian kuota hari ini.
+3. Pada tiap iklan (formulir iklan → **Akun Facebook tujuan**) pilih salah satu:
+
+| Pilihan | Artinya |
+|---|---|
+| **Akun mana saja** | siapa pun yang lebih dulu siap; iklan dipasang **sekali** |
+| **Semua akun** | dipasang di **setiap** akun terdaftar, bergiliran satu per satu (jeda antar akun mengikuti "Jeda antar posting") |
+| **nama akun tertentu** | hanya Chrome dengan nama itu yang boleh memasangnya |
+
+Yang perlu diketahui:
+
+- **Jeda antar posting dan batas harian berlaku per akun.** Batas 30/hari berarti 30 untuk tiap akun, bukan dibagi.
+- Satu iklan tidak pernah dikerjakan dua Chrome sekaligus — tugas dikunci saat diambil.
+- Iklan "semua akun" tetap berstatus **Terjadwal** sampai semua akun kebagian; keterangannya menyebut akun mana yang sudah dan siapa berikutnya. Kalau satu Chrome tidak pernah menyala, iklannya menunggu di situ (terlihat jelas di dasbor).
+- Chrome yang namanya dikosongkan tetap bekerja, tetapi hanya menerima iklan bertujuan *Akun mana saja*.
+
+> Basis data lama perlu dimutakhirkan sekali: jalankan ulang `skema.sql` di Supabase (bagian bawahnya menambahkan kolom `akun` dan `terbit_akun`, aman diulang).
+
 ### Tiga cara menutup formulir (Pengaturan → Cara posting)
 
 | Pilihan | Yang dilakukan ekstensi | Status iklan setelahnya |
@@ -162,11 +185,11 @@ Catatan: menyimpan draf tetap membuka formulir baru di Facebook, jadi **jeda ant
 
 ## Untuk pengembang
 
-- `npm run uji` menjalankan pemeriksaan inti + kontrak Supabase + berkas ekstensi (68 + 33 + 31) (CSV/XLSX, impor, aturan iklan, protokol ekstensi) tanpa server dan tanpa akun apa pun; data uji ditulis ke folder sementara.
+- `npm run uji` menjalankan pemeriksaan inti + kontrak Supabase + berkas ekstensi (80 + 34 + 33) (CSV/XLSX, impor, aturan iklan, protokol ekstensi) tanpa server dan tanpa akun apa pun; data uji ditulis ke folder sementara.
 - `node test/uji-api.js` menguji HTTP terhadap server yang sedang berjalan (`npm run dev`), termasuk alur ekstensi ujung-ke-ujung.
 - `node test/uji-supabase.js` menguji adaptor Supabase memakai tiruan yang **membaca skema.sql** dan menolak kolom/tipe yang tidak cocok — menangkap ketidakcocokan kolom tanpa perlu akun Supabase.
 - Lapisan data bisa ditukar lewat `SUMBER_DATA`: `supabase` atau `berkas` (folder `./data`). Antarmukanya sama, jadi aplikasi ini bisa dijalankan tanpa Supabase bila perlu.
-- Protokol ekstensi: `POST /api/ekstensi` dengan `{kunci, aksi}` — `ping`, `ambil`, `foto`, `progres`, `lapor`, `rekam`. Setiap tugas memakai token sekali pakai.
+- Protokol ekstensi: `POST /api/ekstensi` dengan `{kunci, aksi, perangkat}` — `ping`, `ambil`, `foto`, `progres`, `lapor`, `rekam`. Setiap tugas memakai token sekali pakai; `perangkat` adalah nama akun Chrome pengirim (boleh kosong).
 - Penanda formulir Facebook (label Indonesia/Inggris) ada di objek `PENANDA` dalam `ekstensi-chrome/isi-formulir.js`.
 - Skrip pengisi disuntikkan dua jalur: pendaftaran di manifes (halaman buat iklan) dan `chrome.scripting.executeScript` dari pekerja latar, sehingga tetap jalan bila URL Facebook berbeda dari pola manifes.
 - `node test/uji-formulir.js` menjalankan pengisian formulir di Chrome headless terhadap formulir tiruan (butuh puppeteer-core lewat NODE_PATH; sengaja tidak masuk package.json).

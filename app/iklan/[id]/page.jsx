@@ -3,6 +3,7 @@ import { wajibMasuk } from '../../../lib/auth.js';
 import { db, setelanLengkap } from '../../../lib/data/index.js';
 import { LABEL_STATUS, periksaIklan } from '../../../lib/iklan.js';
 import { formatWaktu } from '../../../lib/waktu.js';
+import { daftarPerangkat } from '../../../lib/perangkat.js';
 import FormIklan from '../../../components/FormIklan.jsx';
 
 export const dynamic = 'force-dynamic';
@@ -37,7 +38,7 @@ export default async function UbahIklan({ params, searchParams }) {
       {!cek.siap && <div className="pesan waspada">Belum bisa dijadwalkan: {cek.galat.join(' ')}</div>}
       {!!cek.saran.length && <div className="pesan info">Catatan: {cek.saran.join(' ')}</div>}
 
-      <FormIklan iklan={iklan} zona={setelan.zona} />
+      <FormIklan iklan={iklan} zona={setelan.zona} akun={daftarPerangkat(setelan)} />
 
       {!!log.length && (
         <>
