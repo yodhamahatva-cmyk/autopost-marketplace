@@ -1,9 +1,9 @@
 'use client';
 import { useState } from 'react';
-import { susunImpor, TARGET } from '../lib/impor.js';
+import { susunImpor, terapkanUbahan, TARGET } from '../lib/impor.js';
 import { simpanImpor } from '../lib/aksi.js';
 import { rupiah } from '../lib/util.js';
-import { labelAkun } from '../lib/perangkat.js';
+import { untukInput, dariInput } from '../lib/waktu.js';
 
 /** Waktu sekarang menurut zona dasbor, siap dipakai input datetime-local. */
 const sekarang = (zona) => new Intl.DateTimeFormat('sv-SE', {
@@ -16,6 +16,8 @@ export default function Impor({ sheetUrl, zona, akun = [] }) {
   const [sumber, setSumber] = useState(null);       // hasil /api/impor
   const [peta, setPeta] = useState({});
   const [opsi, setOpsi] = useState({ barisAwal: 2, mulai: sekarang(zona), jedaMenit: 15, cara: 'otomatis', akun: '', status: 'draf', lewatiDuplikat: true });
+  const [ubahan, setUbahan] = useState({});      // suntingan per baris pratinjau
+  const [akunMassal, setAkunMassal] = useState('');
   const [pesan, setPesan] = useState(null);
   const [sibuk, setSibuk] = useState('');
 
@@ -28,6 +30,7 @@ export default function Impor({ sheetUrl, zona, akun = [] }) {
       if (!j.ok) throw new Error(j.galat);
       setSumber(j);
       setPeta(j.tebakan || {});
+      setUbahan({});
       setOpsi((o) => ({ ...o, barisAwal: j.barisAwal }));
     } catch (e) {
       setPesan({ jenis: 'galat', teks: e.message });
@@ -59,20 +62,31 @@ export default function Impor({ sheetUrl, zona, akun = [] }) {
     return a.kolom ? isiKolom(a.kolom) : '';
   };
 
-  const hasil = sumber ? susunImpor(sumber.baris, {
+  const dasar = sumber ? susunImpor(sumber.baris, {
     peta, barisAwal: Number(opsi.barisAwal) || 1,
     mulai: new Date(opsi.mulai).toISOString(), jedaMenit: Number(opsi.jedaMenit) || 0, akun: opsi.akun,
     cara: opsi.cara, status: opsi.status, namaSumber: sumber.nama,
     kunciSudahAda: opsi.lewatiDuplikat ? sumber.kunciTerpakai : [],
     lewatiDuplikat: opsi.lewatiDuplikat
   }) : null;
-  const bermasalah = hasil ? hasil.hasil.filter((h) => h.masalah.length).length : 0;
+
+  // Suntingan per baris menimpa setelan massal di langkah 3 (tanpa mengubah sumbernya).
+  const baris = dasar ? terapkanUbahan(dasar.hasil, ubahan) : [];
+  const hasil = dasar ? { ...dasar, hasil: baris } : null;
+  const terpilih = baris.filter((b) => b.ikut);
+  const bermasalah = terpilih.filter((b) => b.masalah.length).length;
+  const aturBaris = (nomor, patch) => setUbahan((u) => ({ ...u, [nomor]: { ...(u[nomor] || {}), ...patch } }));
+  const terapkanKeTerpilih = (patch) => setUbahan((u) => {
+    const baru = { ...u };
+    terpilih.forEach((b) => { baru[b.baris] = { ...(baru[b.baris] || {}), ...patch }; });
+    return baru;
+  });
 
   async function jalankan() {
     setSibuk('impor');
     setPesan(null);
     try {
-      const r = await simpanImpor(hasil.hasil.map((h) => h.iklan));
+      const r = await simpanImpor(terpilih.map((h) => h.iklan));
       if (!r.ok) throw new Error(r.galat);
       setPesan({ jenis: 'ok', teks: `${r.jumlah} iklan diimpor. Buka menu Iklan untuk memeriksanya.` });
       setSumber(null);
@@ -184,30 +198,80 @@ export default function Impor({ sheetUrl, zona, akun = [] }) {
           <div className="kartu">
             <h3>4. Pratinjau</h3>
             <div className={'pesan ' + (bermasalah ? 'waspada' : 'ok')}>
-              {hasil.hasil.length} iklan siap diimpor
+              {terpilih.length} dari {baris.length} iklan akan diimpor
               {hasil.dilewati.length ? ` · ${hasil.dilewati.length} dilewati (sudah pernah diimpor)` : ''}
               {bermasalah ? ` · ⚠️ ${bermasalah} belum lengkap` : ''}
             </div>
-            <table>
-              <thead><tr><th>Judul</th><th>Harga</th><th>Jadwal</th><th>Rincian</th></tr></thead>
-              <tbody>
-                {hasil.hasil.slice(0, 6).map((h) => (
-                  <tr key={h.baris}>
-                    <td><b>{h.iklan.judul || '(tanpa judul)'}</b><div className="kecil">baris {h.baris}{h.iklan.kunci ? ' · ' + h.iklan.kunci : ''}{h.iklan.akun ? ' · 👤 ' + labelAkun(h.iklan) : ''}</div>
-                      {!!h.masalah.length && <div className="kecil" style={{ color: 'var(--merah)' }}>⚠️ {h.masalah.join(' ')}</div>}</td>
-                    <td style={{ whiteSpace: 'nowrap' }}>{rupiah(h.iklan.harga)}</td>
-                    <td className="kecil" style={{ whiteSpace: 'nowrap' }}>{new Date(h.iklan.jadwal).toLocaleString('id-ID', { timeZone: zona, dateStyle: 'short', timeStyle: 'short' })}</td>
-                    <td className="kecil">{[h.iklan.kendaraan?.merek, h.iklan.kendaraan?.model, h.iklan.kendaraan?.tahun,
-                      h.iklan.kendaraan?.jarakTempuh ? h.iklan.kendaraan.jarakTempuh + ' km' : '', h.iklan.kendaraan?.warna,
-                      h.iklan.foto?.folder || (h.iklan.foto?.url || []).join(', ')].filter(Boolean).join(' · ')}</td>
+
+            <div className="baris-aksi" style={{ marginBottom: 10, flexWrap: 'wrap' }}>
+              <span className="kecil">Untuk {terpilih.length} baris terpilih:</span>
+              <select value={akunMassal} onChange={(e) => setAkunMassal(e.target.value)} style={{ width: 'auto' }}>
+                <option value="">Akun mana saja</option>
+                <option value="*">Semua akun (satu per satu)</option>
+                {akun.map((a) => <option key={a.nama} value={a.nama}>{a.nama}</option>)}
+              </select>
+              <button className="btn" onClick={() => terapkanKeTerpilih({ akun: akunMassal })} disabled={!terpilih.length}>
+                Terapkan akun ini
+              </button>
+              <button className="btn" onClick={() => setUbahan({})} disabled={!Object.keys(ubahan).length}>
+                Kembalikan seperti semula
+              </button>
+            </div>
+
+            <div style={{ maxHeight: 460, overflow: 'auto' }}>
+              <table>
+                <thead>
+                  <tr>
+                    <th style={{ width: 34 }}>
+                      <input type="checkbox" style={{ width: 'auto' }}
+                        checked={!!baris.length && terpilih.length === baris.length}
+                        onChange={(e) => setUbahan((u) => {
+                          const baru = { ...u };
+                          baris.forEach((b) => { baru[b.baris] = { ...(baru[b.baris] || {}), ikut: e.target.checked }; });
+                          return baru;
+                        })} />
+                    </th>
+                    <th>Judul</th><th>Harga</th><th style={{ width: 190 }}>Jadwal tayang</th>
+                    <th style={{ width: 180 }}>Akun tujuan</th><th>Rincian</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-            {hasil.hasil.length > 6 && <div className="kecil">… dan {hasil.hasil.length - 6} baris lainnya.</div>}
+                </thead>
+                <tbody>
+                  {baris.map((h) => (
+                    <tr key={h.baris} style={h.ikut ? undefined : { opacity: 0.45 }}>
+                      <td><input type="checkbox" style={{ width: 'auto' }} checked={h.ikut}
+                        onChange={(e) => aturBaris(h.baris, { ikut: e.target.checked })} /></td>
+                      <td><b>{h.iklan.judul || '(tanpa judul)'}</b>
+                        <div className="kecil">baris {h.baris}{h.iklan.kunci ? ' · ' + h.iklan.kunci : ''}{h.disunting ? ' · ✏️ disesuaikan' : ''}</div>
+                        {!!h.masalah.length && <div className="kecil" style={{ color: 'var(--merah)' }}>⚠️ {h.masalah.join(' ')}</div>}</td>
+                      <td style={{ whiteSpace: 'nowrap' }}>{rupiah(h.iklan.harga)}</td>
+                      <td>
+                        <input type="datetime-local" value={untukInput(h.iklan.jadwal, zona)}
+                          onChange={(e) => aturBaris(h.baris, { jadwal: dariInput(e.target.value, zona) || undefined })} />
+                      </td>
+                      <td>
+                        <select value={h.iklan.akun || ''} onChange={(e) => aturBaris(h.baris, { akun: e.target.value })}>
+                          <option value="">Akun mana saja</option>
+                          <option value="*">Semua akun</option>
+                          {akun.map((a) => <option key={a.nama} value={a.nama}>{a.nama}</option>)}
+                          {h.iklan.akun && h.iklan.akun !== '*' && !akun.some((a) => a.nama === h.iklan.akun) &&
+                            <option value={h.iklan.akun}>{h.iklan.akun}</option>}
+                        </select>
+                      </td>
+                      <td className="kecil">{[h.iklan.kendaraan?.merek, h.iklan.kendaraan?.model, h.iklan.kendaraan?.tahun,
+                        h.iklan.kendaraan?.jarakTempuh ? h.iklan.kendaraan.jarakTempuh + ' km' : '', h.iklan.kendaraan?.warna,
+                        h.iklan.foto?.folder || (h.iklan.foto?.url || []).join(', ')].filter(Boolean).join(' · ')}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="bantuan" style={{ marginTop: 8 }}>
+              Centang baris yang ingin diimpor, lalu ubah jadwal atau akun tujuannya sendiri-sendiri — atau pilih beberapa baris
+              dan tekan <b>Terapkan akun ini</b>. Isi iklannya (judul, harga, foto, dll.) disunting setelah impor lewat menu <b>Iklan</b>.
+            </div>
             <div className="baris-aksi" style={{ marginTop: 12 }}>
-              <button className="btn utama" onClick={jalankan} disabled={!hasil.hasil.length || sibuk === 'impor'}>
-                {sibuk === 'impor' ? <span className="putar" /> : null} Impor {hasil.hasil.length} iklan
+              <button className="btn utama" onClick={jalankan} disabled={!terpilih.length || sibuk === 'impor'}>
+                {sibuk === 'impor' ? <span className="putar" /> : null} Impor {terpilih.length} iklan
               </button>
               <button className="btn" onClick={() => setSumber(null)}>Batal</button>
             </div>

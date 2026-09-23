@@ -97,6 +97,18 @@ cek(imporAkun.hasil.every((h) => h.iklan.akun === '*') && imporAkun.hasil[0].ikl
 cek(susunImpor(tabel, { peta: petaPakai, barisAwal: 2, mulai }).hasil.every((h) => h.iklan.akun === ''),
   'tanpa pilihan akun → tetap "akun mana saja"');
 
+// Suntingan per baris di pratinjau impor
+const { terapkanUbahan } = await import('../lib/impor.js');
+const disunting = terapkanUbahan(imporAkun.hasil, {
+  2: { akun: 'Showroom B', jadwal: '2026-09-25T01:30:00.000Z' },
+  3: { ikut: false }
+});
+cek(disunting[0].iklan.akun === 'Showroom B' && disunting[0].iklan.jadwal === '2026-09-25T01:30:00.000Z' && disunting[0].disunting,
+  'satu baris boleh punya akun & jadwal sendiri', [disunting[0].iklan.akun, disunting[0].iklan.jadwal]);
+cek(disunting[1].ikut === false && disunting[1].iklan.akun === '*' && !disunting[1].disunting,
+  'baris yang tidak dicentang ditandai tidak ikut, isinya tidak berubah', disunting[1].iklan.akun);
+cek(disunting.filter((d) => d.ikut).length === 1, 'hanya baris tercentang yang akan disimpan');
+
 // ================================================================ Iklan
 bagian('Aturan iklan');
 const barang = rapikanIklan({ judul: 'Kursi Rotan', harga: 350000, kategori: 'Perabotan', kondisi: 'Bekas - Baik', deskripsi: 'Kokoh', foto: { tipe: 'unggahan', berkas: [{ id: 'a' }, { id: 'b' }] } });

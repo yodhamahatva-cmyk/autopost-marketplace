@@ -95,9 +95,16 @@ Judul iklan dibuat otomatis dari **Tahun + Merek + Model**, jadi tidak perlu kol
    - Kolom **nilai tetap** untuk isian yang sama di semua baris, mis. Kategori = `Kendaraan`.
    - Gabungan kolom memakai `{huruf}`, mis. Model = `{C} {D}`, atau Folder Foto = `D:\Foto Mobil\{A}`.
 4. Pada **3. Jadwal & hasil**, atur **iklan pertama tayang**, **jeda antar iklan**, **cara posting**, dan **Akun Facebook tujuan**
-   (akun mana saja · semua akun · satu akun tertentu). Pilihan akun berlaku untuk seluruh baris yang diimpor dan terlihat di pratinjau
-   (👤 di bawah judul); tiap iklan masih bisa diubah sendiri nanti lewat formulirnya. Lalu **Pratinjau** → **Impor**.
-5. Hasil impor berstatus **Draf**. Periksa, lalu ubah ke **Terjadwal** (tombol *Jadwalkan* di daftar iklan).
+   (akun mana saja · semua akun · satu akun tertentu). Setelan ini berlaku untuk seluruh baris.
+5. Pada **4. Pratinjau**, tiap baris bisa disesuaikan sendiri sebelum disimpan:
+   - **centang** baris yang ingin diimpor (yang tidak dicentang dilewati),
+   - ubah **jadwal tayang** baris itu saja,
+   - pilih **akun tujuan** baris itu saja — mis. unit A ke *Showroom A*, unit B ke *Showroom B*,
+   - atau centang beberapa baris lalu tekan **Terapkan akun ini** untuk mengubahnya sekaligus.
+   Baris yang disesuaikan ditandai ✏️, dan **Kembalikan seperti semula** membatalkan semua suntingan.
+   Isi iklannya sendiri (judul, harga, foto, deskripsi) disunting setelah impor lewat menu **Iklan**.
+6. Tekan **Impor** — jumlah pada tombolnya mengikuti baris yang tercentang.
+7. Hasil impor berstatus **Draf** (kecuali dicentang Terjadwal). Periksa, lalu ubah ke **Terjadwal** lewat tombol *Jadwalkan* di daftar iklan.
 
 **Kunci Unik** membuat baris yang sama tidak terimpor dua kali, jadi impor boleh diulang setiap ada stok baru.
 
@@ -187,7 +194,7 @@ Catatan: menyimpan draf tetap membuka formulir baru di Facebook, jadi **jeda ant
 
 ## Untuk pengembang
 
-- `npm run uji` menjalankan pemeriksaan inti + kontrak Supabase + berkas ekstensi (82 + 34 + 33) (CSV/XLSX, impor, aturan iklan, protokol ekstensi) tanpa server dan tanpa akun apa pun; data uji ditulis ke folder sementara.
+- `npm run uji` menjalankan pemeriksaan inti + kontrak Supabase + berkas ekstensi (85 + 34 + 33) (CSV/XLSX, impor, aturan iklan, protokol ekstensi) tanpa server dan tanpa akun apa pun; data uji ditulis ke folder sementara.
 - `node test/uji-api.js` menguji HTTP terhadap server yang sedang berjalan (`npm run dev`), termasuk alur ekstensi ujung-ke-ujung.
 - `node test/uji-supabase.js` menguji adaptor Supabase memakai tiruan yang **membaca skema.sql** dan menolak kolom/tipe yang tidak cocok — menangkap ketidakcocokan kolom tanpa perlu akun Supabase.
 - Lapisan data bisa ditukar lewat `SUMBER_DATA`: `supabase` atau `berkas` (folder `./data`). Antarmukanya sama, jadi aplikasi ini bisa dijalankan tanpa Supabase bila perlu.
