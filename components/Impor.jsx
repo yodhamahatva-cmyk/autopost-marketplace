@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { susunImpor, TARGET } from '../lib/impor.js';
 import { simpanImpor } from '../lib/aksi.js';
 import { rupiah } from '../lib/util.js';
+import { labelAkun } from '../lib/perangkat.js';
 
 /** Waktu sekarang menurut zona dasbor, siap dipakai input datetime-local. */
 const sekarang = (zona) => new Intl.DateTimeFormat('sv-SE', {
@@ -10,11 +11,11 @@ const sekarang = (zona) => new Intl.DateTimeFormat('sv-SE', {
   hour: '2-digit', minute: '2-digit', hour12: false
 }).format(new Date()).replace(' ', 'T').slice(0, 16);
 
-export default function Impor({ sheetUrl, zona }) {
+export default function Impor({ sheetUrl, zona, akun = [] }) {
   const [url, setUrl] = useState(sheetUrl || '');
   const [sumber, setSumber] = useState(null);       // hasil /api/impor
   const [peta, setPeta] = useState({});
-  const [opsi, setOpsi] = useState({ barisAwal: 2, mulai: sekarang(zona), jedaMenit: 15, cara: 'otomatis', status: 'draf', lewatiDuplikat: true });
+  const [opsi, setOpsi] = useState({ barisAwal: 2, mulai: sekarang(zona), jedaMenit: 15, cara: 'otomatis', akun: '', status: 'draf', lewatiDuplikat: true });
   const [pesan, setPesan] = useState(null);
   const [sibuk, setSibuk] = useState('');
 
@@ -60,7 +61,7 @@ export default function Impor({ sheetUrl, zona }) {
 
   const hasil = sumber ? susunImpor(sumber.baris, {
     peta, barisAwal: Number(opsi.barisAwal) || 1,
-    mulai: new Date(opsi.mulai).toISOString(), jedaMenit: Number(opsi.jedaMenit) || 0,
+    mulai: new Date(opsi.mulai).toISOString(), jedaMenit: Number(opsi.jedaMenit) || 0, akun: opsi.akun,
     cara: opsi.cara, status: opsi.status, namaSumber: sumber.nama,
     kunciSudahAda: opsi.lewatiDuplikat ? sumber.kunciTerpakai : [],
     lewatiDuplikat: opsi.lewatiDuplikat
@@ -156,6 +157,14 @@ export default function Impor({ sheetUrl, zona }) {
                   <option value="manual">Pasang manual</option>
                 </select>
               </div>
+              <div>
+                <label htmlFor="akunTujuan">Akun Facebook tujuan</label>
+                <select id="akunTujuan" value={opsi.akun} onChange={(e) => setOpsi({ ...opsi, akun: e.target.value })}>
+                  <option value="">Akun mana saja</option>
+                  <option value="*">Semua akun (satu per satu)</option>
+                  {akun.map((a) => <option key={a.nama} value={a.nama}>{a.nama}{a.aktif ? ' · aktif' : ''}</option>)}
+                </select>
+              </div>
             </div>
             <div className="baris-aksi" style={{ marginTop: 10 }}>
               <label style={{ margin: 0, fontWeight: 400, display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -169,7 +178,7 @@ export default function Impor({ sheetUrl, zona }) {
                 Lewati yang sudah pernah diimpor (Kunci Unik)
               </label>
             </div>
-            <div className="bantuan">Zona waktu {zona}.</div>
+            <div className="bantuan">Zona waktu {zona}. {akun.length ? 'Pilihan akun berlaku untuk semua baris yang diimpor; tiap iklan masih bisa diubah sendiri nanti.' : 'Belum ada akun terdaftar — isi "Nama akun Facebook di Chrome ini" pada popup ekstensi tiap Chrome.'}</div>
           </div>
 
           <div className="kartu">
@@ -184,7 +193,7 @@ export default function Impor({ sheetUrl, zona }) {
               <tbody>
                 {hasil.hasil.slice(0, 6).map((h) => (
                   <tr key={h.baris}>
-                    <td><b>{h.iklan.judul || '(tanpa judul)'}</b><div className="kecil">baris {h.baris}{h.iklan.kunci ? ' · ' + h.iklan.kunci : ''}</div>
+                    <td><b>{h.iklan.judul || '(tanpa judul)'}</b><div className="kecil">baris {h.baris}{h.iklan.kunci ? ' · ' + h.iklan.kunci : ''}{h.iklan.akun ? ' · 👤 ' + labelAkun(h.iklan) : ''}</div>
                       {!!h.masalah.length && <div className="kecil" style={{ color: 'var(--merah)' }}>⚠️ {h.masalah.join(' ')}</div>}</td>
                     <td style={{ whiteSpace: 'nowrap' }}>{rupiah(h.iklan.harga)}</td>
                     <td className="kecil" style={{ whiteSpace: 'nowrap' }}>{new Date(h.iklan.jadwal).toLocaleString('id-ID', { timeZone: zona, dateStyle: 'short', timeStyle: 'short' })}</td>

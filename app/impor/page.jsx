@@ -1,5 +1,6 @@
 import { wajibMasuk } from '../../lib/auth.js';
 import { setelanLengkap } from '../../lib/data/index.js';
+import { daftarPerangkat } from '../../lib/perangkat.js';
 import Impor from '../../components/Impor.jsx';
 
 export const dynamic = 'force-dynamic';
@@ -36,7 +37,7 @@ export default async function HalamanImpor() {
           <b> Bahan Bakar</b>, dan <b>Transmisi</b> sesuai daftar pilihan — nilai di luar daftar ditolak Facebook.
         </div>
       </div>
-      <Impor sheetUrl={setelan.sheetUrl} zona={setelan.zona} />
+      <Impor sheetUrl={setelan.sheetUrl} zona={setelan.zona} akun={daftarPerangkat(setelan)} />
     </>
   );
 }

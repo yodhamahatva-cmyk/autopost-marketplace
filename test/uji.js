@@ -91,6 +91,11 @@ cek(lagi.hasil.length === 1 && lagi.dilewati[0].kunci === 'B1590DYA', 'baris yan
 const tanpaBodi = susunImpor(tabel, { peta: { ...petaPakai, tipeBodi: { kolom: '', teks: '' } }, barisAwal: 2, mulai });
 cek(/Tipe bodi/.test(tanpaBodi.hasil[0].masalah[0] || ''), 'kolom wajib kendaraan yang kosong ditandai', tanpaBodi.hasil[0].masalah);
 cek(untukInput(mulai) === '2026-09-20T09:00', 'waktu bolak-balik input ⇄ ISO tetap sama');
+const imporAkun = susunImpor(tabel, { peta: petaPakai, barisAwal: 2, mulai, jedaMenit: 15, akun: '*', status: 'terjadwal' });
+cek(imporAkun.hasil.every((h) => h.iklan.akun === '*') && imporAkun.hasil[0].iklan.status === 'terjadwal',
+  'akun tujuan dari halaman Impor dipakai semua baris', imporAkun.hasil.map((h) => h.iklan.akun));
+cek(susunImpor(tabel, { peta: petaPakai, barisAwal: 2, mulai }).hasil.every((h) => h.iklan.akun === ''),
+  'tanpa pilihan akun → tetap "akun mana saja"');
 
 // ================================================================ Iklan
 bagian('Aturan iklan');
