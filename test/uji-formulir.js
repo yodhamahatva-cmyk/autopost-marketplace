@@ -152,6 +152,18 @@ async function tungguHasil(page, ms) {
       'kolom yang terus kosong → iklan TIDAK diteruskan, kolomnya disebut', pt);
     await p.close();
 
+    p = await buka(browser, '/marketplace/create/vehicle?skenario=model-saran');
+    r = await tungguHasil(p, 90000);
+    cek(r.hasil && r.hasil.hasil === 'uji' && r.state && r.state.model === 'AYLA 1.0 X',
+      'saran Facebook dipakai, tetapi tulisan Model tetap seperti di sheet (AYLA 1.0 X)', r.state && r.state.model);
+    await p.close();
+
+    p = await buka(browser, '/marketplace/create/vehicle?skenario=model-saran-beda');
+    r = await tungguHasil(p, 90000);
+    cek(r.hasil && r.hasil.hasil === 'uji' && r.state && r.state.model === 'AYLA 1.0 X',
+      'saran yang bunyinya beda ("Ayla") tidak dipakai — ketikan dari sheet dipertahankan', r.state && r.state.model);
+    await p.close();
+
     console.log('■ Simpan sebagai draf');
     p = await buka(browser, '/marketplace/create/vehicle?skenario=draf');
     r = await tungguHasil(p, 90000);

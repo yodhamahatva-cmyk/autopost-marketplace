@@ -264,6 +264,28 @@
   }
 
   /** Buka dropdown (bila kotak diberikan) lalu klik pilihan yang teksnya cocok. target: daftar varian teks. */
+  /** Saran yang bunyinya benar-benar sama (boleh beda huruf besar/kecil & spasi). */
+  function opsiSamaPersis(target) {
+    const t = target.map(norm).filter(Boolean);
+    return daftarOpsi().find((el) => t.indexOf(teksOpsi(el)) >= 0) || null;
+  }
+
+  /**
+   * Facebook kadang menulis ulang isian (mis. saran "Ayla 1.0 X" untuk ketikan
+   * "AYLA 1.0 X"). Untuk kolom seperti Model, tulisan di sheet yang dipakai.
+   */
+  async function samakanHuruf(el, asli, namaKolom) {
+    const kini = nilaiTampil(el);
+    if (!kini || kini === asli) return;
+    if (norm(kini) !== norm(asli)) return;   // isinya memang beda, bukan sekadar huruf besar/kecil
+    try {
+      await isiTeks(el, asli, () => true, namaKolom);
+      tutupDaftar();
+    } catch (e) {
+      peringatan.push(namaKolom + ': tulisannya jadi "' + potongTeks(kini, 30) + '" (di sheet "' + potongTeks(asli, 30) + '")');
+    }
+  }
+
   async function pilihOpsi(kotak, target, namaKolom) {
     if (kotak) klikAsli(kotak);
     try {
@@ -304,10 +326,18 @@
     try {
       if (bisaKetik && el.getAttribute('role') !== 'combobox' && !el.getAttribute('aria-autocomplete')) {
         await isiTeks(el, asli, pembanding, namaKolom);
+        if (opsi.tepat) await samakanHuruf(el, asli, namaKolom);
       } else if (bisaKetik) {
         // Kotak teks dengan saran: ketik, lalu pilih saran yang cocok bila muncul.
         await isiTeks(el, asli, () => true, namaKolom);
-        try { klikAsli(await tunggu(() => opsiCocok(nilai), 4000)); await jeda(500); } catch (e) { /* biarkan teks yang diketik */ }
+        try {
+          // Kolom seperti Model harus tetap seperti tulisan di sheet: saran yang
+          // bunyinya berbeda (mis. "Ayla" untuk "Ayla 1.0 X") tidak boleh dipakai.
+          const cari = opsi.tepat ? () => opsiSamaPersis(nilai) : () => opsiCocok(nilai);
+          klikAsli(await tunggu(cari, opsi.tepat ? 2500 : 4000));
+          await jeda(500);
+        } catch (e) { /* biarkan teks yang diketik */ }
+        if (opsi.tepat) await samakanHuruf(el, asli, namaKolom);
       } else {
         await pilihOpsi(el, nilai, namaKolom);
       }
@@ -596,7 +626,7 @@
     await langkah('mengisi merek');
     await isiAtauPilih(PENANDA.merek, [k.merek], 'Merek', { wajib: true });
     await langkah('mengisi model');
-    await isiAtauPilih(PENANDA.model, [k.model], 'Model', { wajib: true, hindari: HINDARI.model });
+    await isiAtauPilih(PENANDA.model, [k.model], 'Model', { wajib: true, hindari: HINDARI.model, tepat: true });
     if (k.jarakTempuh !== null && k.jarakTempuh !== undefined && k.jarakTempuh !== '') {
       await langkah('mengisi jarak tempuh');
       await isiAtauPilih(PENANDA.jarakTempuh, [String(k.jarakTempuh)], 'Jarak tempuh', { angka: true, wajib: true });

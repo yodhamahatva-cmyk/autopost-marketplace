@@ -46,7 +46,8 @@
     deskripsi: ['Suzuki Baleno 1.4 Bensin 2019', '💰 Harga: Rp 168.000.000', 'Kilometer: 32.000',
       '✔ Mesin responsif', '✔ Interior bersih', 'Siap pakai, dokumen lengkap.'].join('\n'),
     jumlahFoto: 3,
-    kendaraan: { jenis: 'Mobil/Truk', tahun: '2025', merek: skenario === 'kendaraan-merek-salah' ? 'Wuling Xyz' : 'Daihatsu', model: 'Ayla 1.0 X',
+    kendaraan: { jenis: 'Mobil/Truk', tahun: '2025', merek: skenario === 'kendaraan-merek-salah' ? 'Wuling Xyz' : 'Daihatsu',
+      model: skenario.indexOf('model-saran') === 0 ? 'AYLA 1.0 X' : 'Ayla 1.0 X',
       jarakTempuh: 15770, transmisi: 'Otomatis', bahanBakar: 'Bensin', warna: 'Kuning', tipeBodi: 'Hatchback' }
   } : {
     id: 'P0042', token: 't', uji: skenario === 'uji', judul: 'Kursi Rotan Antik', harga: 350000,
@@ -221,7 +222,7 @@
         <input type="file" accept="image/*,image/heif,image/heic" multiple style="display:none" id="fileK"><div class="pratinjau" id="pratinjauK"></div></div>
       <label role="combobox" aria-haspopup="listbox" tabindex="0" id="kTahun"><span class="l">Tahun</span><span class="nilai"></span></label>
       <label role="combobox" aria-haspopup="listbox" tabindex="0" id="kMerek"><span class="l">Merek</span><span class="nilai"></span></label>
-      <label><span class="l">Model</span><input type="text" data-v="model"></label>
+      <label><span class="l">Model</span><input type="text" data-v="model"${skenario.indexOf('model-saran') === 0 ? ' aria-autocomplete="list"' : ''}></label>
       <label><span class="l">Jarak tempuh</span><input type="text" inputmode="numeric" data-v="jarak"></label>
       <label><span class="l">Harga</span><input type="text" inputmode="numeric" data-v="harga"></label>
       <h3>Tampilan dan fitur kendaraan</h3>
@@ -249,9 +250,11 @@
       // Facebook kadang mengosongkan kolom lain setelah sebuah pilihan berubah.
       comboBox('kTrans', () => ['Transmisi manual', 'Transmisi otomatis'], (v, k) => {
         sk.transmisi = v; k.querySelector('.nilai').textContent = v;
-        const kosongkanModel = () => { const el = document.querySelector('[data-v=model]'); if (el) { el.value = ''; sk.model = ''; log('MODEL DIRESET oleh formulir'); cekK(); } };
+        const el = document.querySelector('[data-v=model]');
+        const kosongkanModel = () => { if (el) { el.value = ''; sk.model = ''; log('MODEL DIRESET oleh formulir'); cekK(); } };
         kosongkanModel();
-        if (skenario === 'kolom-direset-terus') setInterval(kosongkanModel, 400);
+        // "…-terus": setiap kali diisi ulang, langsung dikosongkan lagi (tidak bisa diperbaiki).
+        if (skenario === 'kolom-direset-terus' && el) el.addEventListener('input', () => setTimeout(kosongkanModel, 0));
         cekK();
       });
     } else {
@@ -264,6 +267,15 @@
       if (el.dataset.v === 'deskripsi' && skenario === 'deskripsi-terpotong' && v.length > 120) { v = v.slice(0, 120); el.value = v; }
       sk[el.dataset.v] = v; cekK();
     }));
+    if (skenario.indexOf('model-saran') === 0) {
+      // Facebook menawarkan saran dengan ejaannya sendiri; mengekliknya menimpa ketikan.
+      const el = document.querySelector('[data-v=model]');
+      const saran = skenario === 'model-saran-beda' ? ['Ayla', 'Ayla 1.2 R'] : ['Ayla 1.0 X', 'Ayla 1.2 R'];
+      el.addEventListener('input', () => {
+        if (!el.value.trim()) return tutupDaftar();
+        bukaDaftar(el.closest('label'), saran, (v) => { el.value = v; sk.model = v; log('saran Model dipilih: ' + v); cekK(); });
+      });
+    }
     document.getElementById('fileK').addEventListener('change', (e) => {
       const f = [...e.target.files];
       // Facebook menolak berkas yang bukan gambar: tidak dihitung dan tidak ada pratinjaunya.

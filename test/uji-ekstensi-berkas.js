@@ -56,6 +56,7 @@ cek(/btoa\(/.test(folder) && /GAMBAR/.test(folder), 'pembaca folder mengubah gam
 cek(/function tandaGambar/.test(pengisi) && /bukan berkas gambar/.test(pengisi), 'berkas yang bukan gambar ditolak sebelum diunggah ke Facebook');
 cek(/const HINDARI = \{/.test(pengisi) && /interior/.test(pengisi), 'penanda punya daftar kata terlarang (Warna eksterior ≠ Warna Interior)');
 cek(/sudahDipakai\.add\(/.test(pengisi) && /!sudahDipakai\.has\(el\)/.test(pengisi), 'kolom yang sudah diisi tidak dipakai ulang oleh isian berikutnya');
+cek(/async function samakanHuruf/.test(pengisi) && /tepat: true/.test(pengisi), 'tulisan Model dipertahankan persis seperti di sheet (huruf besar/kecil)');
 cek(/async function periksaIsian/.test(pengisi) && /await periksaIsian\(\)/.test(pengisi), 'semua isian dicocokkan ulang sebelum iklan diterbitkan/disimpan');
 cek(/perangkat: s.perangkat/.test(latar) && /perangkat: ''/.test(latar), 'nama akun ikut dikirim pada setiap permintaan ke dasbor');
 cek(/id="perangkat"/.test(popupHtml) && /perangkat/.test(popup), 'popup punya isian nama akun Facebook untuk Chrome ini');
